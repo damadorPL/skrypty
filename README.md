@@ -1,6 +1,6 @@
 # SKRYPTY
 
-Zbiór pomocniczych skryptów Python.
+Zbiór pomocniczych skryptów Python i PowerShell.
 
 ---
 
@@ -31,4 +31,26 @@ Wykrywa wszystkie instalacje Pythona w systemie i dla każdej z nich:
 ```
 python python/clean_pip_env.py           # normalne działanie
 python python/clean_pip_env.py --dry-run # podgląd bez wprowadzania zmian
+```
+
+---
+
+## powershell/update.ps1
+
+> **Windows only** — wymaga PowerShell z dostępem do internetu.
+
+Definiuje funkcję `update`, która sprawdza i aktualizuje narzędzia deweloperskie:
+
+- **uv** — sprawdza wersję przez GitHub API, aktualizuje przez oficjalny skrypt instalacyjny
+- **pnpm** — sprawdza wersję przez `npm view`, aktualizuje przez oficjalny skrypt; usuwa stare wersje z katalogu `.tools`
+- **Bun** — sprawdza wersję przez GitHub API, aktualizuje przez oficjalny skrypt instalacyjny
+- **Deno** — sprawdza wersję przez GitHub API, aktualizuje przez `deno upgrade`
+- **npm global packages** — wykrywa przestarzałe pakiety globalne i aktualizuje każdy do `@latest`
+
+Jeśli narzędzie nie jest zainstalowane, skrypt próbuje je automatycznie zainstalować przed aktualizacją.
+
+**Użycie:**
+```powershell
+. .\powershell\update.ps1   # załaduj funkcję do sesji
+update                       # uruchom aktualizację
 ```
