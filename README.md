@@ -1,4 +1,4 @@
-# skrpty
+# SKRYPTY
 
 Zbiór pomocniczych skryptów Python.
 
