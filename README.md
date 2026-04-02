@@ -4,7 +4,7 @@ Zbiór pomocniczych skryptów Python.
 
 ---
 
-## clean_pip_env.py
+## python/clean_pip_env.py
 
 Wykrywa wszystkie instalacje Pythona w systemie i dla każdej z nich:
 - aktualizuje `pip` do najnowszej wersji
@@ -17,6 +17,6 @@ Wykrywa wszystkie instalacje Pythona w systemie i dla każdej z nich:
 
 **Użycie:**
 ```
-python clean_pip_env.py           # normalne działanie
-python clean_pip_env.py --dry-run # podgląd bez wprowadzania zmian
+python python/clean_pip_env.py           # normalne działanie
+python python/clean_pip_env.py --dry-run # podgląd bez wprowadzania zmian
 ```
