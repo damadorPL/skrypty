@@ -1,6 +1,6 @@
 # SKRYPTY
 
-Zbiór pomocniczych skryptów Python i PowerShell.
+Zbiór pomocniczych skryptów Python \ PowerShell \ Bash.
 
 ---
 
@@ -53,4 +53,43 @@ Jeśli narzędzie nie jest zainstalowane, skrypt próbuje je automatycznie zains
 ```powershell
 . .\powershell\update.ps1   # załaduj funkcję do sesji
 update                       # uruchom aktualizację
+```
+
+---
+
+## linux/.bash_aliases
+
+> **Linux only** — plik z aliasami do dołączenia do `~/.bashrc` lub `~/.bash_aliases`.
+
+Definiuje alias `update`, który kolejno uruchamia:
+- `sudo apt update -y` — odświeża listę pakietów
+- `sudo apt full-upgrade -y` — aktualizuje wszystkie pakiety
+- `sudo apt autoremove -y` — usuwa niepotrzebne zależności
+- `sudo apt clean -y` / `autoclean -y` — czyści lokalną pamięć podręczną pakietów
+
+**Użycie:**
+```bash
+cat linux/.bash_aliases >> ~/.bash_aliases   # dołącz do istniejącego pliku
+source ~/.bash_aliases                        # załaduj do bieżącej sesji
+update                                        # uruchom aktualizację systemu
+```
+
+---
+
+## linux/remove_old_kernels.sh
+
+> **Linux (Debian/Ubuntu)** — wymaga `dpkg` i `apt`.
+
+Wykrywa i usuwa stare jądra systemowe (obrazy, nagłówki, moduły), zachowując aktualnie używane.
+
+**Działanie:**
+1. Pobiera wersję aktywnego jądra przez `uname -a`
+2. Listuje pakiety `linux-image`, `linux-headers`, `linux-modules` inne niż bieżące
+3. Bez argumentu — tryb podglądu (wypisuje pakiety do usunięcia)
+4. Z argumentem `exec` — faktycznie usuwa pakiety przez `apt purge`
+
+**Użycie:**
+```bash
+bash linux/remove_old_kernels.sh           # podgląd — lista pakietów do usunięcia
+sudo bash linux/remove_old_kernels.sh exec # usuń stare jądra
 ```
