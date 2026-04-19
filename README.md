@@ -35,6 +35,35 @@ python python/clean_pip_env.py --dry-run # podgląd bez wprowadzania zmian
 
 ---
 
+## python/update_pip.py
+
+> **Windows only** — wymaga `python.exe` i opcjonalnie Python Launcher (`py`).
+
+Wykrywa wszystkie instalacje Pythona w systemie i aktualizuje `pip` do najnowszej wersji w każdej z nich.
+
+**Wykrywanie instalacji (kolejno):**
+1. `py --list-paths` (Python Launcher for Windows)
+2. Typowe katalogi instalacyjne (glob po wzorcach):
+   - `C:\Python*`, `C:\Program Files\Python*`, `C:\Program Files (x86)\Python*`
+   - `%LOCALAPPDATA%\Programs\Python\Python*`, `%APPDATA%\Python\Python*`
+   - `C:\Anaconda*`, `C:\ProgramData\Anaconda*`, `C:\Miniconda*`
+   - `%USERPROFILE%\Anaconda*`, `%USERPROFILE%\Miniconda*`
+   - `%USERPROFILE%\AppData\Local\conda\conda\envs`
+3. Wpisy w zmiennej PATH
+
+**Filtrowanie:**
+- Pomija stuby Windows Store (`WindowsApps`)
+- Pomija instalacje bez działającego `pip`
+- Deduplikuje wyniki (ta sama ścieżka z różnych źródeł liczy się raz)
+
+**Użycie:**
+```
+python python/update_pip.py           # normalne działanie
+python python/update_pip.py --dry-run # podgląd bez wprowadzania zmian
+```
+
+---
+
 ## powershell/update.ps1
 
 > **Windows only** — wymaga PowerShell z dostępem do internetu.
