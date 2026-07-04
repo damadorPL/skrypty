@@ -19,7 +19,7 @@ import subprocess
 import sys
 import argparse
 import glob as globmod
-from pathlib import Path
+import ctypes
 
 PROTECTED = {"pip", "setuptools", "wheel"}
 
@@ -176,8 +176,7 @@ def clean_env(exe: str, dry: bool) -> None:
         print("    Nothing to remove — already clean.")
     else:
         print(f"    Removing {len(to_remove)} package(s): {', '.join(to_remove)}")
-        for pkg in to_remove:
-            run([exe, "-m", "pip", "uninstall", "-y", pkg], dry)
+        run([exe, "-m", "pip", "uninstall", "-y"] + to_remove, dry)
 
     print("  Remaining packages:")
     subprocess.run([exe, "-m", "pip", "list"], check=False)
@@ -190,6 +189,15 @@ def main():
     parser.add_argument("--dry-run", action="store_true",
                         help="Show what would happen without making changes.")
     args = parser.parse_args()
+
+    # Warning if not run as Admin on Windows
+    try:
+        is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+    except AttributeError:
+        is_admin = True  # Non-Windows systems/mock
+
+    if not is_admin:
+        print("[WARNING] Not running as Administrator. Upgrades in system directories may fail.\n")
 
     if args.dry_run:
         print("=== DRY RUN — no changes will be made ===\n")

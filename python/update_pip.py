@@ -17,6 +17,7 @@ import subprocess
 import sys
 import argparse
 import glob as globmod
+import ctypes
 
 SEARCH_ROOTS = [
     r"C:\Python*",
@@ -146,6 +147,15 @@ def main():
     parser.add_argument("--dry-run", action="store_true",
                         help="Show what would happen without making changes.")
     args = parser.parse_args()
+
+    # Warning if not run as Admin on Windows
+    try:
+        is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+    except AttributeError:
+        is_admin = True
+
+    if not is_admin:
+        print("[WARNING] Not running as Administrator. Upgrades in system directories may fail.\n")
 
     if args.dry_run:
         print("=== DRY RUN — no changes will be made ===\n")

@@ -4,22 +4,25 @@
 # the list printed in the dry run
 
 uname -a
-IN_USE=$(uname -a | awk '{ print $3 }')
+IN_USE=$(uname -r)
 echo "Your in use kernel is $IN_USE"
 
 OLD_KERNELS=$(
     dpkg --list |
         grep -v "$IN_USE" |
-        grep -Ei 'linux-image|linux-headers|linux-modules' |
+        grep -E '^(ii|rc)\s+linux-(image|headers|modules|image-extra|modules-extra)-[0-9]' |
         awk '{ print $2 }'
 )
 echo "Old Kernels to be removed:"
 echo "$OLD_KERNELS"
 
 if [ "$1" == "exec" ]; then
-    for PACKAGE in $OLD_KERNELS; do
-        yes | apt purge "$PACKAGE"
-    done
+    if [ -n "$OLD_KERNELS" ]; then
+        echo "Purging old kernels..."
+        sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y $OLD_KERNELS
+    else
+        echo "No old kernels to remove."
+    fi
 else
     echo "If all looks good, run it again like this: sudo remove_old_kernels.sh exec"
 fi

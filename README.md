@@ -8,9 +8,10 @@ Zbiór pomocniczych skryptów Python \ PowerShell \ Bash.
 
 > **Windows only** — wymaga `python.exe` i opcjonalnie Python Launcher (`py`).
 
-Wykrywa wszystkie instalacje Pythona w systemie i dla każdej z nich:
+Wykrwywa wszystkie instalacje Pythona w systemie i dla każdej z nich:
+- ostrzega o braku uprawnień Administratora na Windows
 - aktualizuje `pip` do najnowszej wersji
-- odinstalowuje wszystkie pakiety poza `pip`, `setuptools` i `wheel`
+- odinstalowuje wszystkie pakiety poza `pip`, `setuptools` i `wheel` masowo w jednej komendzie (znaczące przyspieszenie)
 
 **Wykrywanie instalacji (kolejno):**
 1. `py --list-paths` (Python Launcher for Windows)
@@ -39,7 +40,7 @@ python python/clean_pip_env.py --dry-run # podgląd bez wprowadzania zmian
 
 > **Windows only** — wymaga `python.exe` i opcjonalnie Python Launcher (`py`).
 
-Wykrywa wszystkie instalacje Pythona w systemie i aktualizuje `pip` do najnowszej wersji w każdej z nich.
+Wykrywa wszystkie instalacje Pythona w systemie, ostrzega o braku uprawnień Administratora i aktualizuje `pip` do najnowszej wersji w każdej z nich.
 
 **Wykrywanie instalacji (kolejno):**
 1. `py --list-paths` (Python Launcher for Windows)
@@ -70,10 +71,10 @@ python python/update_pip.py --dry-run # podgląd bez wprowadzania zmian
 
 Definiuje funkcję `update`, która sprawdza i aktualizuje narzędzia deweloperskie:
 
-- **uv** — sprawdza wersję przez GitHub API, aktualizuje przez oficjalny skrypt instalacyjny
+- **uv** — aktualizuje bezpośrednio przy użyciu wbudowanego polecenia `uv self update` (zapobiega rate-limitom GitHub API)
 - **pnpm** — sprawdza wersję przez `npm view`, aktualizuje przez oficjalny skrypt; usuwa stare wersje z katalogu `.tools`
-- **Bun** — sprawdza wersję przez GitHub API, aktualizuje przez oficjalny skrypt instalacyjny
-- **Deno** — sprawdza wersję przez GitHub API, aktualizuje przez `deno upgrade`
+- **Bun** — aktualizuje bezpośrednio przy użyciu wbudowanego polecenia `bun upgrade`
+- **Deno** — aktualizuje bezpośrednio przy użyciu wbudowanego polecenia `deno upgrade`
 - **npm global packages** — wykrywa przestarzałe pakiety globalne i aktualizuje każdy do `@latest`
 
 Jeśli narzędzie nie jest zainstalowane, skrypt próbuje je automatycznie zainstalować przed aktualizacją.
@@ -109,13 +110,13 @@ update                                        # uruchom aktualizację systemu
 
 > **Linux (Debian/Ubuntu)** — wymaga `dpkg` i `apt`.
 
-Wykrywa i usuwa stare jądra systemowe (obrazy, nagłówki, moduły), zachowując aktualnie używane.
+Wykrywa i usuwa stare jądra systemowe (obrazy, nagłówki, moduły), zachowując aktualnie używane i chroniąc metapakiety przed usunięciem.
 
 **Działanie:**
-1. Pobiera wersję aktywnego jądra przez `uname -a`
-2. Listuje pakiety `linux-image`, `linux-headers`, `linux-modules` inne niż bieżące
+1. Pobiera wersję aktywnego jądra przez `uname -r`
+2. Listuje pakiety `linux-image`, `linux-headers`, `linux-modules` itp. dopasowując tylko wersjonowane paczki (ignoruje np. `linux-image-generic`)
 3. Bez argumentu — tryb podglądu (wypisuje pakiety do usunięcia)
-4. Z argumentem `exec` — faktycznie usuwa pakiety przez `apt purge`
+4. Z argumentem `exec` — usuwa stare jądra masowo w jednym wywołaniu `apt-get purge` (zapobiega wielokrotnemu odświeżaniu GRUB)
 
 **Użycie:**
 ```bash

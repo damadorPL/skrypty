@@ -80,17 +80,7 @@ function update {
         $currentUvVersion = (uv --version).Split(' ')[1]
         Write-Host "Installed Version: $currentUvVersion"
 
-        $latestUvVersion = Get-GitHubLatestVersion -Repo "astral-sh/uv" -StripPrefix "v"
-        Write-Host "Latest Version:    $latestUvVersion"
-
-        if ([version]$currentUvVersion -lt [version]$latestUvVersion) {
-            Write-Host "Newer version available. Updating UV..." -ForegroundColor Yellow
-            Invoke-RemoteScript "https://astral.sh/uv/install.ps1"
-            Write-Host "UV updated successfully." -ForegroundColor Green
-            uv --version
-        } else {
-            Write-Host "UV is already up to date." -ForegroundColor Green
-        }
+        uv self update
     } catch {
         Write-Host "❌ Could not check/update UV. Is it installed and in your PATH?" -ForegroundColor Red
         Write-Host $_.Exception.Message -ForegroundColor Red
@@ -152,18 +142,7 @@ function update {
         $currentBunVersion = bun -v
         Write-Host "Installed Version: $currentBunVersion"
 
-        # Bun tags are "bun-v1.x.y" — strip the prefix
-        $latestBunVersion = Get-GitHubLatestVersion -Repo "oven-sh/bun" -StripPrefix "bun-v"
-        Write-Host "Latest Version:    $latestBunVersion"
-
-        if ([version]$currentBunVersion -lt [version]$latestBunVersion) {
-            Write-Host "Newer version available. Updating Bun..." -ForegroundColor Yellow
-            Invoke-RemoteScript "https://bun.sh/install.ps1"
-            Write-Host "Bun updated successfully." -ForegroundColor Green
-            bun -v
-        } else {
-            Write-Host "Bun is already up to date." -ForegroundColor Green
-        }
+        bun upgrade
     } catch {
         Write-Host "❌ Could not check/update Bun. Is it installed and in your PATH?" -ForegroundColor Red
         Write-Host $_.Exception.Message -ForegroundColor Red
@@ -177,17 +156,7 @@ function update {
         $currentDenoVersion = (deno -v | Select-Object -First 1).Split(' ')[1]
         Write-Host "Installed Version: $currentDenoVersion"
 
-        $latestDenoVersion = Get-GitHubLatestVersion -Repo "denoland/deno" -StripPrefix "v"
-        Write-Host "Latest Version:    $latestDenoVersion"
-
-        if ([version]$currentDenoVersion -lt [version]$latestDenoVersion) {
-            Write-Host "Newer version available. Updating Deno..." -ForegroundColor Yellow
-            deno upgrade
-            Write-Host "Deno updated successfully." -ForegroundColor Green
-            deno -v
-        } else {
-            Write-Host "Deno is already up to date." -ForegroundColor Green
-        }
+        deno upgrade
     } catch {
         Write-Host "❌ Could not check/update Deno. Is it installed and in your PATH?" -ForegroundColor Red
         Write-Host $_.Exception.Message -ForegroundColor Red
