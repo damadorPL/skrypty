@@ -69,12 +69,15 @@ python python/update_pip.py --dry-run # podgląd bez wprowadzania zmian
 
 > **Windows only** — wymaga PowerShell z dostępem do internetu.
 
-Definiuje funkcję `update`, która sprawdza i aktualizuje narzędzia deweloperskie:
+Definiuje funkcję `Get-UpdateTools`, która sprawdza i aktualizuje narzędzia deweloperskie:
 
-- **uv** — aktualizuje bezpośrednio przy użyciu wbudowanego polecenia `uv self update` (zapobiega rate-limitom GitHub API)
+- **uv** — sprawdza obecność instalacji globalnej w `%USERPROFILE%\.local\bin\uv.exe`. Aktualizuje ją za pomocą `uv self update` lub instaluje przez oficjalny instalator standalone.
 - **pnpm** — sprawdza wersję przez `npm view`, aktualizuje przez oficjalny skrypt; usuwa stare wersje z katalogu `.tools`
 - **Bun** — aktualizuje bezpośrednio przy użyciu wbudowanego polecenia `bun upgrade`
 - **Deno** — aktualizuje bezpośrednio przy użyciu wbudowanego polecenia `deno upgrade`
+- **Claude Code** — aktualizuje przy użyciu wbudowanego polecenia `claude update`
+- **Antigravity CLI (agy)** — aktualizuje przy użyciu wbudowanego polecenia `agy update`
+- **Grok CLI (grok)** — aktualizuje przy użyciu wbudowanego polecenia `grok update`
 - **npm global packages** — wykrywa przestarzałe pakiety globalne i aktualizuje każdy do `@latest`
 
 Jeśli narzędzie nie jest zainstalowane, skrypt próbuje je automatycznie zainstalować przed aktualizacją.
@@ -82,7 +85,7 @@ Jeśli narzędzie nie jest zainstalowane, skrypt próbuje je automatycznie zains
 **Użycie:**
 ```powershell
 . .\powershell\update.ps1   # załaduj funkcję do sesji
-update                       # uruchom aktualizację
+Get-UpdateTools             # uruchom aktualizację
 ```
 
 ---

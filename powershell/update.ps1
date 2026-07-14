@@ -1,4 +1,4 @@
-function update {
+function Get-UpdateTools {
     # ---------------------------------------------------------------------------
     # Install missing tools before updating
     # ---------------------------------------------------------------------------
@@ -26,6 +26,24 @@ function update {
             Command    = "deno"
             InstallCmd = { Invoke-RestMethod https://deno.land/install.ps1 | Invoke-Expression }
             DocsUrl    = "https://docs.deno.com/runtime/getting_started/installation/"
+        },
+        @{
+            Name       = "claude"
+            Command    = "claude"
+            InstallCmd = { Invoke-RestMethod https://claude.ai/install.ps1 | Invoke-Expression }
+            DocsUrl    = "https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview"
+        },
+        @{
+            Name       = "agy"
+            Command    = "agy"
+            InstallCmd = { Invoke-RestMethod https://antigravity.google/cli/install.ps1 | Invoke-Expression }
+            DocsUrl    = "https://antigravity.google/docs/cli/reference"
+        },
+        @{
+            Name       = "grok"
+            Command    = "grok"
+            InstallCmd = { Invoke-RestMethod https://x.ai/cli/install.ps1 | Invoke-Expression }
+            DocsUrl    = "https://x.ai/cli"
         }
     )
 
@@ -58,7 +76,6 @@ function update {
             [string]$StripPrefix   # e.g. "bun-v" or "v" or ""
         )
         $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -ErrorAction Stop
-        # Detect GitHub rate-limit response (returns a message field instead of tag_name)
         if ($release.message) {
             throw "GitHub API error: $($release.message)"
         }
@@ -73,18 +90,25 @@ function update {
     }
 
     # ---------------------------------------------------------------------------
-    # UV
+    # UV (Global Installation)
     # ---------------------------------------------------------------------------
     Write-SectionHeader "UV"
     try {
-        $currentUvVersion = (uv --version).Split(' ')[1]
-        Write-Host "Installed Version: $currentUvVersion"
-
-        uv self update
+        $globalUvPath = Join-Path $env:USERPROFILE ".local\bin\uv.exe"
+        if (Test-Path $globalUvPath) {
+            Write-Host "Updating global uv at: $globalUvPath"
+            $currentUvVersion = (& $globalUvPath --version).Split(' ')[1]
+            Write-Host "Current global version: $currentUvVersion"
+            & $globalUvPath self update
+        } else {
+            Write-Host "Global uv not found. Installing via standalone installer..." -ForegroundColor Yellow
+            Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
+        }
     } catch {
-        Write-Host "❌ Could not check/update UV. Is it installed and in your PATH?" -ForegroundColor Red
+        Write-Host "❌ Could not check/update global UV." -ForegroundColor Red
         Write-Host $_.Exception.Message -ForegroundColor Red
     }
+
 
     # ---------------------------------------------------------------------------
     # pnpm
@@ -163,12 +187,44 @@ function update {
     }
 
     # ---------------------------------------------------------------------------
+    # Claude Code
+    # ---------------------------------------------------------------------------
+    Write-SectionHeader "Claude Code"
+    try {
+        claude update
+    } catch {
+        Write-Host "❌ Could not check/update Claude. Is it installed and in your PATH?" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+    }
+
+    # ---------------------------------------------------------------------------
+    # Antigravity CLI (agy)
+    # ---------------------------------------------------------------------------
+    Write-SectionHeader "Antigravity CLI (agy)"
+    try {
+        agy update
+    } catch {
+        Write-Host "❌ Could not check/update agy. Is it installed and in your PATH?" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+    }
+
+    # ---------------------------------------------------------------------------
+    # Grok CLI (grok)
+    # ---------------------------------------------------------------------------
+    Write-SectionHeader "Grok CLI (grok)"
+    try {
+        grok update
+    } catch {
+        Write-Host "❌ Could not check/update grok. Is it installed and in your PATH?" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+    }
+
+    # ---------------------------------------------------------------------------
     # NPM Global Packages
     # ---------------------------------------------------------------------------
     Write-SectionHeader "NPM Global Packages"
     try {
         $outdatedRaw = npm outdated -g --json 2>&1
-        # Exit code 0 = all up to date, 1 = outdated packages found, anything else = real error
         if ($LASTEXITCODE -gt 1) {
             throw "npm exited with code {$LASTEXITCODE}: $outdatedRaw"
         }
