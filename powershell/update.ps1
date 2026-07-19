@@ -224,29 +224,87 @@ function Get-UpdateTools {
     # ---------------------------------------------------------------------------
     Write-SectionHeader "NPM Global Packages"
     try {
-        $outdatedRaw = npm outdated -g --json 2>&1
-        if ($LASTEXITCODE -gt 1) {
-            throw "npm exited with code {$LASTEXITCODE}: $outdatedRaw"
+        $npmListJson = npm list -g --depth=0 --json 2>$null
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($npmListJson)) {
+            Write-Host "⚠️  No global npm packages found or npm list failed." -ForegroundColor Yellow
+            return
         }
 
-        if ($LASTEXITCODE -eq 1) {
-            Write-Host "Outdated npm global packages found. Updating each to @latest..." -ForegroundColor Yellow
+        $packagesObj = $npmListJson | ConvertFrom-Json
+        $dependencies = $packagesObj.dependencies
 
-            $outdatedJson = $outdatedRaw | ConvertFrom-Json
-            $packageNames = $outdatedJson | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name
+        if ($dependencies) {
+            $results = [System.Collections.Generic.List[PSObject]]::new()
+            $anyUpdated = $false
 
-            foreach ($pkg in $packageNames) {
-                $current  = $outdatedJson.$pkg.current
-                $latest   = $outdatedJson.$pkg.latest
-                Write-Host "  Updating $pkg  $current → $latest" -ForegroundColor Yellow
-                npm install -g "$pkg@latest"
+            foreach ($pkgName in $dependencies.PSObject.Properties.Name) {
+                $currentVersion = $dependencies.$pkgName.version
+                if (-not $currentVersion) { continue }
+
+                # Fetch latest version & last modified date
+                $viewData = npm view $pkgName version time.modified --json 2>$null
+                if ($viewData) {
+                    $info = $viewData | ConvertFrom-Json
+                    $latestVersion = $info.version
+                    $modifiedStr = $info.'time.modified'
+                    
+                    if ($modifiedStr) {
+                        $lastModified = [DateTime]$modifiedStr
+                        $ageSpan = (Get-Date) - $lastModified
+                        
+                        if ($ageSpan.TotalDays -lt 1) {
+                            $age = "{0:N0} hours ago" -f $ageSpan.TotalHours
+                        } elseif ($ageSpan.TotalDays -lt 30) {
+                            $age = "{0:N0} days ago" -f $ageSpan.TotalDays
+                        } else {
+                            $age = "{0:N0} months ago" -f ($ageSpan.TotalDays / 30)
+                        }
+                    } else {
+                        $lastModified = "Unknown"
+                        $age = "Unknown"
+                    }
+                } else {
+                    $latestVersion = "Unknown"
+                    $lastModified = "Unknown"
+                    $age = "Unknown"
+                }
+
+                $isOutdated = $false
+                try {
+                    if ($latestVersion -ne "Unknown" -and [version]$currentVersion -lt [version]$latestVersion) {
+                        $isOutdated = $true
+                    }
+                } catch {
+                    if ($latestVersion -ne "Unknown" -and $currentVersion -ne $latestVersion) {
+                        $isOutdated = $true
+                    }
+                }
+
+                if ($isOutdated) {
+                    Write-Host "  Updating $pkgName from $currentVersion to $latestVersion..." -ForegroundColor Yellow
+                    npm install -g "$pkgName@latest" 2>$null | Out-Null
+                    $currentVersion = $latestVersion
+                    $anyUpdated = $true
+                }
+
+                $results.Add([PSCustomObject]@{
+                    "Package Name"      = $pkgName
+                    "Installed Version" = $currentVersion
+                    "Latest Version"    = $latestVersion
+                    "Last Published"    = if ($lastModified -is [DateTime]) { $lastModified.ToString("yyyy-MM-dd HH:mm") } else { $lastModified }
+                    "Age of Update"     = $age
+                })
             }
 
-            Write-Host "Global packages updated successfully." -ForegroundColor Green
-            Write-Host "New global package list (top level):"
-            npm list -g --depth=0
+            if ($anyUpdated) {
+                Write-Host "✅ Global packages updated successfully." -ForegroundColor Green
+            } else {
+                Write-Host "All npm global packages are already up to date." -ForegroundColor Green
+            }
+
+            $results | Format-Table -AutoSize
         } else {
-            Write-Host "All npm global packages are up to date." -ForegroundColor Green
+            Write-Host "No global npm packages found." -ForegroundColor Yellow
         }
     } catch {
         Write-Host "❌ Could not check/update npm global packages. Is npm installed?" -ForegroundColor Red
