@@ -78,7 +78,7 @@ Definiuje funkcję `Get-UpdateTools`, która sprawdza i aktualizuje narzędzia d
 - **Claude Code** — aktualizuje przy użyciu wbudowanego polecenia `claude update`
 - **Antigravity CLI (agy)** — aktualizuje przy użyciu wbudowanego polecenia `agy update`
 - **Grok CLI (grok)** — aktualizuje przy użyciu wbudowanego polecenia `grok update`
-- **npm global packages** — wykrywa przestarzałe pakiety globalne i aktualizuje każdy do `@latest`
+- **npm global packages** — pobiera listę globalnych pakietów npm, sprawdza ich najnowsze wersje w rejestrze oraz daty ostatniej publikacji (wiek aktualizacji), automatycznie aktualizuje przestarzałe pakiety do `@latest` i wyświetla sformatowaną tabelę podsumowującą stan wszystkich pakietów.
 
 Jeśli narzędzie nie jest zainstalowane, skrypt próbuje je automatycznie zainstalować przed aktualizacją.
 
