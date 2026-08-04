@@ -206,8 +206,8 @@ function Get-UpdateTools {
     Write-SectionHeader "Claude Code"
     try {
         $rawClaudeVersion = (claude --version 2>$null | Out-String).Trim()
-        if ($rawClaudeVersion -match '(\d+\.\d+\.\d+)') {
-            $currentClaudeVersion = $Matches[1]
+        $currentClaudeVersion = if ($rawClaudeVersion -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { $null }
+        if ($currentClaudeVersion) {
             Write-Host "Installed Version: $currentClaudeVersion" -ForegroundColor Gray
         }
 
@@ -215,7 +215,9 @@ function Get-UpdateTools {
         if ($updateOutput -match "up to date|already") {
             Write-Host "✅ Claude Code is already up to date." -ForegroundColor Green
         } else {
-            Write-Host "✅ Claude Code updated successfully." -ForegroundColor Green
+            $rawNewClaude = (claude --version 2>$null | Out-String).Trim()
+            $newClaudeVersion = if ($rawNewClaude -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { "latest" }
+            Write-Host "✅ Claude Code updated successfully ($currentClaudeVersion ➔ $newClaudeVersion)." -ForegroundColor Green
         }
     } catch {
         Write-Host "❌ Could not check/update Claude Code: $($_.Exception.Message)" -ForegroundColor Red
@@ -227,8 +229,8 @@ function Get-UpdateTools {
     Write-SectionHeader "Antigravity CLI (agy)"
     try {
         $rawAgyVersion = (agy --version 2>$null | Out-String).Trim()
-        if ($rawAgyVersion -match '(\d+\.\d+\.\d+)') {
-            $currentAgyVersion = $Matches[1]
+        $currentAgyVersion = if ($rawAgyVersion -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { $null }
+        if ($currentAgyVersion) {
             Write-Host "Installed Version: $currentAgyVersion" -ForegroundColor Gray
         }
 
@@ -236,7 +238,9 @@ function Get-UpdateTools {
         if ($updateOutput -match "already|latest version|up to date") {
             Write-Host "✅ Antigravity CLI (agy) is already up to date." -ForegroundColor Green
         } else {
-            Write-Host "✅ Antigravity CLI (agy) updated successfully." -ForegroundColor Green
+            $rawNewAgy = (agy --version 2>$null | Out-String).Trim()
+            $newAgyVersion = if ($rawNewAgy -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { "latest" }
+            Write-Host "✅ Antigravity CLI (agy) updated successfully ($currentAgyVersion ➔ $newAgyVersion)." -ForegroundColor Green
         }
     } catch {
         Write-Host "❌ Could not check/update Antigravity CLI (agy): $($_.Exception.Message)" -ForegroundColor Red
@@ -248,8 +252,8 @@ function Get-UpdateTools {
     Write-SectionHeader "Grok CLI (grok)"
     try {
         $rawGrokVersion = (grok --version 2>$null | Out-String).Trim()
-        if ($rawGrokVersion -match '(\d+\.\d+\.\d+)') {
-            $currentGrokVersion = $Matches[1]
+        $currentGrokVersion = if ($rawGrokVersion -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { $null }
+        if ($currentGrokVersion) {
             Write-Host "Installed Version: $currentGrokVersion" -ForegroundColor Gray
         }
 
@@ -257,7 +261,9 @@ function Get-UpdateTools {
         if ($updateOutput -match "Already up to date|up to date|latest") {
             Write-Host "✅ Grok CLI (grok) is already up to date." -ForegroundColor Green
         } else {
-            Write-Host "✅ Grok CLI (grok) updated successfully." -ForegroundColor Green
+            $rawNewGrok = (grok --version 2>$null | Out-String).Trim()
+            $newGrokVersion = if ($rawNewGrok -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { "latest" }
+            Write-Host "✅ Grok CLI (grok) updated successfully ($currentGrokVersion ➔ $newGrokVersion)." -ForegroundColor Green
         }
     } catch {
         Write-Host "❌ Could not check/update Grok CLI (grok): $($_.Exception.Message)" -ForegroundColor Red

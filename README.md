@@ -76,9 +76,9 @@ Definiuje funkcję `Get-UpdateTools`, która sprawdza i aktualizuje narzędzia d
 - **pnpm** — porównuje wersję lokalną z rejestrem npm, aktualizuje przez oficjalny skrypt oraz czyści stare wersje w `.tools\pnpm-exe`.
 - **Bun** — wyświetla zainstalowaną wersję i aktualizuje za pomocą `bun upgrade`.
 - **Deno** — wyświetla zainstalowaną wersję i aktualizuje za pomocą `deno upgrade`.
-- **Claude Code** — wykrywa zainstalowaną wersję i aktualizuje za pomocą `claude update`.
-- **Antigravity CLI (agy)** — wykrywa zainstalowaną wersję i aktualizuje za pomocą `agy update`.
-- **Grok CLI (grok)** — wykrywa zainstalowaną wersję i aktualizuje za pomocą `grok update`.
+- **Claude Code** — wykrywa zainstalowaną wersję i aktualizuje za pomocą `claude update` (wyświetla informację o zmianie wersji np. `1.0.0 ➔ 1.0.1`).
+- **Antigravity CLI (agy)** — wykrywa zainstalowaną wersję i aktualizuje za pomocą `agy update` (wyświetla informację o zmianie wersji).
+- **Grok CLI (grok)** — wykrywa zainstalowaną wersję i aktualizuje za pomocą `grok update` (wyświetla informację o zmianie wersji).
 - **npm global packages** — sprawdza zainstalowane pakiety globalne npm, pobiera informacje o najnowszych wersjach i dacie publikacji z rejestru, aktualizuje przestarzałe paczki do `@latest` oraz prezentuje podsumowanie w czytelnej tabeli.
 
 **Użycie:**
