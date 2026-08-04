@@ -71,16 +71,15 @@ python python/update_pip.py --dry-run # podgląd bez wprowadzania zmian
 
 Definiuje funkcję `Get-UpdateTools`, która sprawdza i aktualizuje narzędzia deweloperskie:
 
-- **uv** — sprawdza obecność instalacji globalnej w `%USERPROFILE%\.local\bin\uv.exe`. Aktualizuje ją za pomocą `uv self update` lub instaluje przez oficjalny instalator standalone.
-- **pnpm** — sprawdza wersję przez `npm view`, aktualizuje przez oficjalny skrypt; usuwa stare wersje z katalogu `.tools`
-- **Bun** — aktualizuje bezpośrednio przy użyciu wbudowanego polecenia `bun upgrade`
-- **Deno** — aktualizuje bezpośrednio przy użyciu wbudowanego polecenia `deno upgrade`
-- **Claude Code** — aktualizuje przy użyciu wbudowanego polecenia `claude update`
-- **Antigravity CLI (agy)** — aktualizuje przy użyciu wbudowanego polecenia `agy update`
-- **Grok CLI (grok)** — aktualizuje przy użyciu wbudowanego polecenia `grok update`
-- **npm global packages** — pobiera listę globalnych pakietów npm, sprawdza ich najnowsze wersje w rejestrze oraz daty ostatniej publikacji (wiek aktualizacji), automatycznie aktualizuje przestarzałe pakiety do `@latest` i wyświetla sformatowaną tabelę podsumowującą stan wszystkich pakietów.
-
-Jeśli narzędzie nie jest zainstalowane, skrypt próbuje je automatycznie zainstalować przed aktualizacją.
+- **Automatyczna instalacja brakujących narzędzi** — przed rozpoczęciem aktualizacji sprawdza obecność narzędzi (`uv`, `pnpm`, `bun`, `deno`, `claude`, `agy`, `grok`) i automatycznie instaluje brakujące z oficjalnych źródeł.
+- **uv** — sprawdza instalację w `%USERPROFILE%\.local\bin\uv.exe`, aktualizuje przez `uv self update` lub pobiera wersję standalone.
+- **pnpm** — porównuje wersję lokalną z rejestrem npm, aktualizuje przez oficjalny skrypt oraz czyści stare wersje w `.tools\pnpm-exe`.
+- **Bun** — wyświetla zainstalowaną wersję i aktualizuje za pomocą `bun upgrade`.
+- **Deno** — wyświetla zainstalowaną wersję i aktualizuje za pomocą `deno upgrade`.
+- **Claude Code** — wykrywa zainstalowaną wersję i aktualizuje za pomocą `claude update`.
+- **Antigravity CLI (agy)** — wykrywa zainstalowaną wersję i aktualizuje za pomocą `agy update`.
+- **Grok CLI (grok)** — wykrywa zainstalowaną wersję i aktualizuje za pomocą `grok update`.
+- **npm global packages** — sprawdza zainstalowane pakiety globalne npm, pobiera informacje o najnowszych wersjach i dacie publikacji z rejestru, aktualizuje przestarzałe paczki do `@latest` oraz prezentuje podsumowanie w czytelnej tabeli.
 
 **Użycie:**
 ```powershell
