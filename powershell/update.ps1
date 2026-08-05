@@ -1,4 +1,8 @@
-function Get-UpdateTools {
+﻿function Get-UpdateTools {
+    # Set output encoding to UTF-8 to support emojis
+    $oldOutputEncoding = [Console]::OutputEncoding
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
     # ---------------------------------------------------------------------------
     # Install missing tools before updating
     # ---------------------------------------------------------------------------
@@ -98,20 +102,33 @@ function Get-UpdateTools {
         if (Test-Path $globalUvPath) {
             $currentUvVersion = (& $globalUvPath --version).Split(' ')[1]
             Write-Host "Installed Version: $currentUvVersion" -ForegroundColor Gray
+            Write-Host "🔍 Checking for UV updates..." -ForegroundColor Gray
 
-            $updateOutput = (& $globalUvPath self update 2>&1) | Out-String
-            if ($updateOutput -match "already on|latest version|up to date") {
+            $dryRunOutput = (& $globalUvPath self update --dry-run 2>&1) | Out-String
+            if ($dryRunOutput -match "already on|latest version|up to date") {
                 Write-Host "✅ UV is already up to date." -ForegroundColor Green
             } else {
+                $latestVersion = "latest"
+                if ($dryRunOutput -match "to v?(\d+\.\d+\.\d+)") {
+                    $latestVersion = $Matches[1]
+                }
+                Write-Host "⚠️  Newer version available ($latestVersion). Updating UV..." -ForegroundColor Yellow
+                Write-Progress -Activity "Updating UV" -Status "Downloading and installing update..." -PercentComplete -1
+                $updateOutput = (& $globalUvPath self update 2>&1) | Out-String
+                Write-Progress -Activity "Updating UV" -Completed
+
                 $newUvVersion = (& $globalUvPath --version).Split(' ')[1]
-                Write-Host "✅ UV updated successfully ($currentUvVersion ➔ $newUvVersion)." -ForegroundColor Green
+                Write-Host "✅ UV updated successfully ($currentUvVersion -> $newUvVersion)." -ForegroundColor Green
             }
         } else {
             Write-Host "⚠️  Global uv not found. Installing via standalone installer..." -ForegroundColor Yellow
+            Write-Progress -Activity "Installing UV" -Status "Running installer..." -PercentComplete -1
             Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
+            Write-Progress -Activity "Installing UV" -Completed
             Write-Host "✅ UV installed successfully." -ForegroundColor Green
         }
     } catch {
+        Write-Progress -Activity "Updating UV" -Completed
         Write-Host "❌ Could not check/update UV: $($_.Exception.Message)" -ForegroundColor Red
     }
 
@@ -123,14 +140,17 @@ function Get-UpdateTools {
     try {
         $currentPnpmVersion = (pnpm -v).Trim()
         Write-Host "Installed Version: $currentPnpmVersion" -ForegroundColor Gray
+        Write-Host "🔍 Checking for pnpm updates..." -ForegroundColor Gray
 
         $latestPnpmVersion = (npm view pnpm version).Trim()
 
         if ([version]$currentPnpmVersion -lt [version]$latestPnpmVersion) {
             Write-Host "Latest Version:    $latestPnpmVersion" -ForegroundColor Gray
             Write-Host "⚠️  Newer version available ($latestPnpmVersion). Updating pnpm..." -ForegroundColor Yellow
+            Write-Progress -Activity "Updating pnpm" -Status "Running installer script..." -PercentComplete -1
             Invoke-RemoteScript "https://get.pnpm.io/install.ps1" | Out-Null
-            Write-Host "✅ pnpm updated successfully ($currentPnpmVersion ➔ $latestPnpmVersion)." -ForegroundColor Green
+            Write-Progress -Activity "Updating pnpm" -Completed
+            Write-Host "✅ pnpm updated successfully ($currentPnpmVersion -> $latestPnpmVersion)." -ForegroundColor Green
 
             $pnpmExePath = Join-Path $env:LOCALAPPDATA "pnpm\.tools\pnpm-exe"
             if (Test-Path $pnpmExePath) {
@@ -159,6 +179,7 @@ function Get-UpdateTools {
         }
 
     } catch {
+        Write-Progress -Activity "Updating pnpm" -Completed
         Write-Host "❌ Could not check/update pnpm: $($_.Exception.Message)" -ForegroundColor Red
     }
 
@@ -169,15 +190,23 @@ function Get-UpdateTools {
     try {
         $currentBunVersion = (bun -v).Trim()
         Write-Host "Installed Version: $currentBunVersion" -ForegroundColor Gray
+        Write-Host "🔍 Checking for Bun updates..." -ForegroundColor Gray
 
-        $updateOutput = (bun upgrade 2>&1) | Out-String
-        if ($updateOutput -match "already on|latest version|up to date") {
-            Write-Host "✅ Bun is already up to date." -ForegroundColor Green
-        } else {
+        $latestBunVersion = (npm view bun version).Trim()
+
+        if ([version]$currentBunVersion -lt [version]$latestBunVersion) {
+            Write-Host "⚠️  Newer version available ($latestBunVersion). Updating Bun..." -ForegroundColor Yellow
+            Write-Progress -Activity "Updating Bun" -Status "Running bun upgrade..." -PercentComplete -1
+            $updateOutput = (bun upgrade 2>&1) | Out-String
+            Write-Progress -Activity "Updating Bun" -Completed
+
             $newBunVersion = (bun -v).Trim()
-            Write-Host "✅ Bun updated successfully ($currentBunVersion ➔ $newBunVersion)." -ForegroundColor Green
+            Write-Host "✅ Bun updated successfully ($currentBunVersion -> $newBunVersion)." -ForegroundColor Green
+        } else {
+            Write-Host "✅ Bun is already up to date." -ForegroundColor Green
         }
     } catch {
+        Write-Progress -Activity "Updating Bun" -Completed
         Write-Host "❌ Could not check/update Bun: $($_.Exception.Message)" -ForegroundColor Red
     }
 
@@ -188,15 +217,32 @@ function Get-UpdateTools {
     try {
         $currentDenoVersion = ((deno -v | Select-Object -First 1).Split(' ')[1]).Trim()
         Write-Host "Installed Version: $currentDenoVersion" -ForegroundColor Gray
+        Write-Host "🔍 Checking for Deno updates..." -ForegroundColor Gray
 
-        $updateOutput = (deno upgrade 2>&1) | Out-String
-        if ($updateOutput -match "already up to date|most recent release|up to date") {
+        $dryRunOutput = (deno upgrade --dry-run 2>&1) | Out-String
+
+        if ($dryRunOutput -match "most recent release|up to date") {
             Write-Host "✅ Deno is already up to date." -ForegroundColor Green
         } else {
+            $latestVersion = "latest"
+            if ($dryRunOutput -match "(\d+\.\d+\.\d+)") {
+                foreach ($m in $Matches.Values) {
+                    if ($m -ne $currentDenoVersion) {
+                        $latestVersion = $m
+                        break
+                    }
+                }
+            }
+            Write-Host "⚠️  Newer version available ($latestVersion). Updating Deno..." -ForegroundColor Yellow
+            Write-Progress -Activity "Updating Deno" -Status "Running deno upgrade..." -PercentComplete -1
+            $updateOutput = (deno upgrade 2>&1) | Out-String
+            Write-Progress -Activity "Updating Deno" -Completed
+
             $newDenoVersion = ((deno -v | Select-Object -First 1).Split(' ')[1]).Trim()
-            Write-Host "✅ Deno updated successfully ($currentDenoVersion ➔ $newDenoVersion)." -ForegroundColor Green
+            Write-Host "✅ Deno updated successfully ($currentDenoVersion -> $newDenoVersion)." -ForegroundColor Green
         }
     } catch {
+        Write-Progress -Activity "Updating Deno" -Completed
         Write-Host "❌ Could not check/update Deno: $($_.Exception.Message)" -ForegroundColor Red
     }
 
@@ -210,16 +256,24 @@ function Get-UpdateTools {
         if ($currentClaudeVersion) {
             Write-Host "Installed Version: $currentClaudeVersion" -ForegroundColor Gray
         }
+        Write-Host "🔍 Checking for Claude Code updates..." -ForegroundColor Gray
 
-        $updateOutput = (claude update 2>&1) | Out-String
-        if ($updateOutput -match "up to date|already") {
-            Write-Host "✅ Claude Code is already up to date." -ForegroundColor Green
-        } else {
+        $latestClaudeVersion = (npm view @anthropic-ai/claude-code version).Trim()
+
+        if ($currentClaudeVersion -and [version]$currentClaudeVersion -lt [version]$latestClaudeVersion) {
+            Write-Host "⚠️  Newer version available ($latestClaudeVersion). Updating Claude Code..." -ForegroundColor Yellow
+            Write-Progress -Activity "Updating Claude Code" -Status "Running claude update..." -PercentComplete -1
+            $updateOutput = (claude update 2>&1) | Out-String
+            Write-Progress -Activity "Updating Claude Code" -Completed
+
             $rawNewClaude = (claude --version 2>$null | Out-String).Trim()
-            $newClaudeVersion = if ($rawNewClaude -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { "latest" }
-            Write-Host "✅ Claude Code updated successfully ($currentClaudeVersion ➔ $newClaudeVersion)." -ForegroundColor Green
+            $newClaudeVersion = if ($rawNewClaude -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { $latestClaudeVersion }
+            Write-Host "✅ Claude Code updated successfully ($currentClaudeVersion -> $newClaudeVersion)." -ForegroundColor Green
+        } else {
+            Write-Host "✅ Claude Code is already up to date." -ForegroundColor Green
         }
     } catch {
+        Write-Progress -Activity "Updating Claude Code" -Completed
         Write-Host "❌ Could not check/update Claude Code: $($_.Exception.Message)" -ForegroundColor Red
     }
 
@@ -233,16 +287,22 @@ function Get-UpdateTools {
         if ($currentAgyVersion) {
             Write-Host "Installed Version: $currentAgyVersion" -ForegroundColor Gray
         }
+        Write-Host "🔍 Checking for Antigravity CLI updates..." -ForegroundColor Gray
 
+        Write-Progress -Activity "Checking Antigravity CLI" -Status "Checking for updates..." -PercentComplete -1
         $updateOutput = (agy update 2>&1) | Out-String
+        Write-Progress -Activity "Checking Antigravity CLI" -Completed
+
         if ($updateOutput -match "already|latest version|up to date") {
             Write-Host "✅ Antigravity CLI (agy) is already up to date." -ForegroundColor Green
         } else {
+            Write-Host "⚠️  Newer version available. Updating Antigravity CLI (agy)..." -ForegroundColor Yellow
             $rawNewAgy = (agy --version 2>$null | Out-String).Trim()
             $newAgyVersion = if ($rawNewAgy -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { "latest" }
-            Write-Host "✅ Antigravity CLI (agy) updated successfully ($currentAgyVersion ➔ $newAgyVersion)." -ForegroundColor Green
+            Write-Host "✅ Antigravity CLI (agy) updated successfully ($currentAgyVersion -> $newAgyVersion)." -ForegroundColor Green
         }
     } catch {
+        Write-Progress -Activity "Checking Antigravity CLI" -Completed
         Write-Host "❌ Could not check/update Antigravity CLI (agy): $($_.Exception.Message)" -ForegroundColor Red
     }
 
@@ -256,16 +316,36 @@ function Get-UpdateTools {
         if ($currentGrokVersion) {
             Write-Host "Installed Version: $currentGrokVersion" -ForegroundColor Gray
         }
+        Write-Host "🔍 Checking for Grok CLI updates..." -ForegroundColor Gray
 
-        $updateOutput = (grok update 2>&1) | Out-String
-        if ($updateOutput -match "Already up to date|up to date|latest") {
-            Write-Host "✅ Grok CLI (grok) is already up to date." -ForegroundColor Green
+        $checkOutput = (grok update --check --json 2>$null) | Out-String
+        if ($checkOutput) {
+            $checkObj = $checkOutput | ConvertFrom-Json
+            if ($checkObj.updateAvailable -eq $true) {
+                $latestGrokVersion = $checkObj.latestVersion
+                Write-Host "⚠️  Newer version available ($latestGrokVersion). Updating Grok CLI (grok)..." -ForegroundColor Yellow
+                Write-Progress -Activity "Updating Grok CLI" -Status "Running grok update..." -PercentComplete -1
+                $updateOutput = (grok update 2>&1) | Out-String
+                Write-Progress -Activity "Updating Grok CLI" -Completed
+
+                $rawNewGrok = (grok --version 2>$null | Out-String).Trim()
+                $newGrokVersion = if ($rawNewGrok -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { $latestGrokVersion }
+                Write-Host "✅ Grok CLI (grok) updated successfully ($currentGrokVersion -> $newGrokVersion)." -ForegroundColor Green
+            } else {
+                Write-Host "✅ Grok CLI (grok) is already up to date." -ForegroundColor Green
+            }
         } else {
-            $rawNewGrok = (grok --version 2>$null | Out-String).Trim()
-            $newGrokVersion = if ($rawNewGrok -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { "latest" }
-            Write-Host "✅ Grok CLI (grok) updated successfully ($currentGrokVersion ➔ $newGrokVersion)." -ForegroundColor Green
+            $updateOutput = (grok update 2>&1) | Out-String
+            if ($updateOutput -match "Already up to date|up to date|latest") {
+                Write-Host "✅ Grok CLI (grok) is already up to date." -ForegroundColor Green
+            } else {
+                $rawNewGrok = (grok --version 2>$null | Out-String).Trim()
+                $newGrokVersion = if ($rawNewGrok -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { "latest" }
+                Write-Host "✅ Grok CLI (grok) updated successfully ($currentGrokVersion -> $newGrokVersion)." -ForegroundColor Green
+            }
         }
     } catch {
+        Write-Progress -Activity "Updating Grok CLI" -Completed
         Write-Host "❌ Could not check/update Grok CLI (grok): $($_.Exception.Message)" -ForegroundColor Red
     }
 
@@ -274,6 +354,7 @@ function Get-UpdateTools {
     # ---------------------------------------------------------------------------
     Write-SectionHeader "NPM Global Packages"
     try {
+        Write-Host "🔍 Fetching global package list..." -ForegroundColor Gray
         $npmListJson = npm list -g --depth=0 --json 2>$null
         if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($npmListJson)) {
             Write-Host "⚠️  No global npm packages found or npm list failed." -ForegroundColor Yellow
@@ -332,7 +413,9 @@ function Get-UpdateTools {
 
                 if ($isOutdated) {
                     Write-Host "⚠️  Updating $pkgName from $currentVersion to $latestVersion..." -ForegroundColor Yellow
+                    Write-Progress -Activity "Updating Global NPM Packages" -Status "Installing $pkgName@latest..." -PercentComplete -1
                     npm install -g "$pkgName@latest" 2>$null | Out-Null
+                    Write-Progress -Activity "Updating Global NPM Packages" -Completed
                     $currentVersion = $latestVersion
                     $anyUpdated = $true
                 }
@@ -357,8 +440,14 @@ function Get-UpdateTools {
             Write-Host "⚠️  No global npm packages found." -ForegroundColor Yellow
         }
     } catch {
+        Write-Progress -Activity "Updating Global NPM Packages" -Completed
         Write-Host "❌ Could not check/update npm global packages: $($_.Exception.Message)" -ForegroundColor Red
     }
 
     Write-Host "`n✅ All checks complete." -ForegroundColor Green
+
+    # Restore original console output encoding
+    if ($oldOutputEncoding) {
+        [Console]::OutputEncoding = $oldOutputEncoding
+    }
 }
