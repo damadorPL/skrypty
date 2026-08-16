@@ -1,4 +1,4 @@
-﻿function Get-UpdateTools {
+function Get-UpdateTools {
     # Set output encoding to UTF-8 to support emojis
     $oldOutputEncoding = [Console]::OutputEncoding
     [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -98,13 +98,14 @@
     # ---------------------------------------------------------------------------
     Write-SectionHeader "UV"
     try {
-        $globalUvPath = Join-Path $env:USERPROFILE ".local\bin\uv.exe"
-        if (Test-Path $globalUvPath) {
-            $currentUvVersion = (& $globalUvPath --version).Split(' ')[1]
+        $uvCmd = Get-Command "uv" -ErrorAction SilentlyContinue
+        $uvPath = if ($uvCmd) { $uvCmd.Source } else { Join-Path $env:USERPROFILE ".local\bin\uv.exe" }
+        if (Test-Path $uvPath) {
+            $currentUvVersion = (& $uvPath --version).Split(' ')[1]
             Write-Host "Installed Version: $currentUvVersion" -ForegroundColor Gray
             Write-Host "🔍 Checking for UV updates..." -ForegroundColor Gray
 
-            $dryRunOutput = (& $globalUvPath self update --dry-run 2>&1) | Out-String
+            $dryRunOutput = (& $uvPath self update --dry-run 2>&1) | Out-String
             if ($dryRunOutput -match "already on|latest version|up to date") {
                 Write-Host "✅ UV is already up to date." -ForegroundColor Green
             } else {
@@ -114,11 +115,15 @@
                 }
                 Write-Host "⚠️  Newer version available ($latestVersion). Updating UV..." -ForegroundColor Yellow
                 Write-Progress -Activity "Updating UV" -Status "Downloading and installing update..." -PercentComplete -1
-                $updateOutput = (& $globalUvPath self update 2>&1) | Out-String
+                $updateOutput = (& $uvPath self update 2>&1) | Out-String
                 Write-Progress -Activity "Updating UV" -Completed
 
-                $newUvVersion = (& $globalUvPath --version).Split(' ')[1]
-                Write-Host "✅ UV updated successfully ($currentUvVersion -> $newUvVersion)." -ForegroundColor Green
+                $newUvVersion = (& $uvPath --version).Split(' ')[1]
+                if ($currentUvVersion -ne $newUvVersion) {
+                    Write-Host "✅ UV updated successfully ($currentUvVersion -> $newUvVersion)." -ForegroundColor Green
+                } else {
+                    Write-Host "✅ UV is already up to date." -ForegroundColor Green
+                }
             }
         } else {
             Write-Host "⚠️  Global uv not found. Installing via standalone installer..." -ForegroundColor Yellow
