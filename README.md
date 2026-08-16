@@ -74,13 +74,14 @@ Definiuje funkcję `Get-UpdateTools`, która sprawdza i aktualizuje narzędzia d
 - **Automatyczna instalacja brakujących narzędzi** — przed rozpoczęciem aktualizacji sprawdza obecność narzędzi (`uv`, `pnpm`, `bun`, `deno`, `claude`, `agy`, `grok`) i automatycznie instaluje brakujące z oficjalnych źródeł.
 - **Weryfikacja wersji i wskaźniki postępu** — przed aktualizacją każdego narzędzia sprawdza dostępność nowej wersji (gdzie to możliwe za pomocą szybkich zapytań offline/rejestru) i wyświetla wskaźnik postępu (`Write-Progress`) oraz informację o znalezionej aktualizacji przed wykonaniem instalacji.
 - **uv** — sprawdza instalację w `%USERPROFILE%\.local\bin\uv.exe`, porównuje wersję lokalną z najnowszą, pokazuje postęp i aktualizuje przez `uv self update` lub pobiera wersję standalone.
-- **pnpm** — porównuje wersję lokalną z rejestrem npm, pokazuje pasek postępu aktualizacji oraz czyści stare wersje w `.tools\pnpm-exe`.
+- **pnpm** — porównuje wersję lokalną z rejestrem npm, prezentuje pasek postępu i aktualizuje za pomocą natywnego `pnpm self-update` (zapobiegając ponownemu dodawaniu ścieżek do PATH).
 - **Bun** — porównuje lokalną wersję z rejestrem npm, pobiera i aktualizuje za pomocą `bun upgrade` prezentując wskaźnik postępu.
 - **Deno** — sprawdza najnowszą wersję w trybie dry-run, aktualizuje za pomocą `deno upgrade` prezentując wskaźnik postępu.
 - **Claude Code** — sprawdza najnowszą wersję w rejestrze npm, aktualizuje za pomocą `claude update` z prezentacją paska postępu.
 - **Antigravity CLI (agy)** — sprawdza aktualizacje za pomocą `agy update` i aktualizuje z wizualizacją postępu.
 - **Grok CLI (grok)** — odpytuje o status aktualizacji w formacie JSON i instaluje nową wersję z prezentacją paska postępu.
 - **npm global packages** — sprawdza zainstalowane pakiety globalne npm, pobiera informacje o najnowszych wersjach i dacie publikacji z rejestru, aktualizuje przestarzałe paczki do `@latest` z paskiem postępu oraz prezentuje podsumowanie w czytelnej tabeli.
+- **Deduplikacja zmiennej PATH** — po zakończeniu sprawdzania narzędzi automatycznie wykrywa i usuwa zduplikowane wpisy ze zmiennej środowiskowej PATH użytkownika.
 
 **Użycie:**
 ```powershell

@@ -152,32 +152,15 @@ function Get-UpdateTools {
         if ([version]$currentPnpmVersion -lt [version]$latestPnpmVersion) {
             Write-Host "Latest Version:    $latestPnpmVersion" -ForegroundColor Gray
             Write-Host "⚠️  Newer version available ($latestPnpmVersion). Updating pnpm..." -ForegroundColor Yellow
-            Write-Progress -Activity "Updating pnpm" -Status "Running installer script..." -PercentComplete -1
-            Invoke-RemoteScript "https://get.pnpm.io/install.ps1" | Out-Null
+            Write-Progress -Activity "Updating pnpm" -Status "Running pnpm self-update..." -PercentComplete -1
+            $updateOutput = (pnpm self-update 2>&1) | Out-String
             Write-Progress -Activity "Updating pnpm" -Completed
-            Write-Host "✅ pnpm updated successfully ($currentPnpmVersion -> $latestPnpmVersion)." -ForegroundColor Green
 
-            $pnpmExePath = Join-Path $env:LOCALAPPDATA "pnpm\.tools\pnpm-exe"
-            if (Test-Path $pnpmExePath) {
-                Write-Host "`n   Checking for old pnpm versions in: $pnpmExePath" -ForegroundColor Gray
-
-                $installedVersions = Get-ChildItem -Path $pnpmExePath -Directory |
-                                     Sort-Object { [version]$_.Name } -Descending
-
-                if ($installedVersions.Count -gt 1) {
-                    $versionsToRemove = $installedVersions | Select-Object -Skip 1
-                    foreach ($ver in $versionsToRemove) {
-                        Write-Host "🗑️  Deleting old pnpm version: $($ver.Name)" -ForegroundColor Magenta
-                        try {
-                            Remove-Item -Path $ver.FullName -Recurse -Force -ErrorAction Stop
-                        } catch {
-                            Write-Host "❌ Failed to delete $($ver.Name): $($_.Exception.Message)" -ForegroundColor Red
-                        }
-                    }
-                    Write-Host "✅ Cleanup complete. Kept version $($installedVersions[0].Name)." -ForegroundColor Green
-                } else {
-                    Write-Host "   No old pnpm versions to clean up." -ForegroundColor Gray
-                }
+            $newPnpmVersion = (pnpm -v).Trim()
+            if ($currentPnpmVersion -ne $newPnpmVersion) {
+                Write-Host "✅ pnpm updated successfully ($currentPnpmVersion -> $newPnpmVersion)." -ForegroundColor Green
+            } else {
+                Write-Host "✅ pnpm is already up to date." -ForegroundColor Green
             }
         } else {
             Write-Host "✅ pnpm is already up to date." -ForegroundColor Green
@@ -448,6 +431,24 @@ function Get-UpdateTools {
         Write-Progress -Activity "Updating Global NPM Packages" -Completed
         Write-Host "❌ Could not check/update npm global packages: $($_.Exception.Message)" -ForegroundColor Red
     }
+
+    # Deduplicate User PATH if any duplicates exist
+    try {
+        $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+        if ($userPath) {
+            $pathItems = $userPath.Split(';', [System.StringSplitOptions]::RemoveEmptyEntries)
+            $uniqueList = @()
+            foreach ($item in $pathItems) {
+                $trimmed = $item.Trim()
+                if ($trimmed -and ($uniqueList -notcontains $trimmed)) {
+                    $uniqueList += $trimmed
+                }
+            }
+            if ($uniqueList.Count -lt $pathItems.Count) {
+                [Environment]::SetEnvironmentVariable('Path', ($uniqueList -join ';'), 'User')
+            }
+        }
+    } catch {}
 
     Write-Host "`n✅ All checks complete." -ForegroundColor Green
 
