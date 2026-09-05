@@ -160,7 +160,15 @@ function Get-UpdateTools {
             if ($currentPnpmVersion -ne $newPnpmVersion) {
                 Write-Host "✅ pnpm updated successfully ($currentPnpmVersion -> $newPnpmVersion)." -ForegroundColor Green
             } else {
-                Write-Host "✅ pnpm is already up to date." -ForegroundColor Green
+                Write-Host "⚠️  self-update did not change version. Running official installer script..." -ForegroundColor Yellow
+                Invoke-WebRequest https://get.pnpm.io/install.ps1 -UseBasicParsing | Invoke-Expression
+                $newPnpmVersion = (pnpm -v).Trim()
+                if ($currentPnpmVersion -ne $newPnpmVersion) {
+                    Write-Host "✅ pnpm updated successfully ($currentPnpmVersion -> $newPnpmVersion)." -ForegroundColor Green
+                } else {
+                    Write-Host "❌ pnpm update failed (remained $currentPnpmVersion)." -ForegroundColor Red
+                    if ($updateOutput) { Write-Host $updateOutput -ForegroundColor Gray }
+                }
             }
         } else {
             Write-Host "✅ pnpm is already up to date." -ForegroundColor Green

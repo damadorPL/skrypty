@@ -74,7 +74,7 @@ Definiuje funkcję `Get-UpdateTools`, która sprawdza i aktualizuje narzędzia d
 - **Automatyczna instalacja brakujących narzędzi** — przed rozpoczęciem aktualizacji sprawdza obecność narzędzi (`uv`, `pnpm`, `bun`, `deno`, `claude`, `agy`, `grok`) i automatycznie instaluje brakujące z oficjalnych źródeł.
 - **Weryfikacja wersji i wskaźniki postępu** — przed aktualizacją każdego narzędzia sprawdza dostępność nowej wersji (gdzie to możliwe za pomocą szybkich zapytań offline/rejestru) i wyświetla wskaźnik postępu (`Write-Progress`) oraz informację o znalezionej aktualizacji przed wykonaniem instalacji.
 - **uv** — sprawdza instalację w `%USERPROFILE%\.local\bin\uv.exe`, porównuje wersję lokalną z najnowszą, pokazuje postęp i aktualizuje przez `uv self update` lub pobiera wersję standalone.
-- **pnpm** — porównuje wersję lokalną z rejestrem npm, prezentuje pasek postępu i aktualizuje za pomocą natywnego `pnpm self-update` (zapobiegając ponownemu dodawaniu ścieżek do PATH).
+- **pnpm** — porównuje wersję lokalną z rejestrem npm, prezentuje pasek postępu i aktualizuje za pomocą natywnego `pnpm self-update` (z automatycznym fallbackiem do oficjalnego instalatora `install.ps1`, jeśli wersja nie uległa zmianie).
 - **Bun** — porównuje lokalną wersję z rejestrem npm, pobiera i aktualizuje za pomocą `bun upgrade` prezentując wskaźnik postępu.
 - **Deno** — sprawdza najnowszą wersję w trybie dry-run, aktualizuje za pomocą `deno upgrade` prezentując wskaźnik postępu.
 - **Claude Code** — sprawdza najnowszą wersję w rejestrze npm, aktualizuje za pomocą `claude update` z prezentacją paska postępu.
