@@ -26,12 +26,6 @@ function Get-UpdateTools {
             DocsUrl    = "https://bun.com/docs/installation#windows"
         },
         @{
-            Name       = "deno"
-            Command    = "deno"
-            InstallCmd = { Invoke-RestMethod https://deno.land/install.ps1 | Invoke-Expression }
-            DocsUrl    = "https://docs.deno.com/runtime/getting_started/installation/"
-        },
-        @{
             Name       = "claude"
             Command    = "claude"
             InstallCmd = { Invoke-RestMethod https://claude.ai/install.ps1 | Invoke-Expression }
@@ -42,12 +36,6 @@ function Get-UpdateTools {
             Command    = "agy"
             InstallCmd = { Invoke-RestMethod https://antigravity.google/cli/install.ps1 | Invoke-Expression }
             DocsUrl    = "https://antigravity.google/docs/cli/reference"
-        },
-        @{
-            Name       = "grok"
-            Command    = "grok"
-            InstallCmd = { Invoke-RestMethod https://x.ai/cli/install.ps1 | Invoke-Expression }
-            DocsUrl    = "https://x.ai/cli"
         }
     )
 
@@ -207,42 +195,6 @@ function Get-UpdateTools {
     }
 
     # ---------------------------------------------------------------------------
-    # Deno
-    # ---------------------------------------------------------------------------
-    Write-SectionHeader "Deno"
-    try {
-        $currentDenoVersion = ((deno -v | Select-Object -First 1).Split(' ')[1]).Trim()
-        Write-Host "Installed Version: $currentDenoVersion" -ForegroundColor Gray
-        Write-Host "🔍 Checking for Deno updates..." -ForegroundColor Gray
-
-        $dryRunOutput = (deno upgrade --dry-run 2>&1) | Out-String
-
-        if ($dryRunOutput -match "most recent release|up to date") {
-            Write-Host "✅ Deno is already up to date." -ForegroundColor Green
-        } else {
-            $latestVersion = "latest"
-            if ($dryRunOutput -match "(\d+\.\d+\.\d+)") {
-                foreach ($m in $Matches.Values) {
-                    if ($m -ne $currentDenoVersion) {
-                        $latestVersion = $m
-                        break
-                    }
-                }
-            }
-            Write-Host "⚠️  Newer version available ($latestVersion). Updating Deno..." -ForegroundColor Yellow
-            Write-Progress -Activity "Updating Deno" -Status "Running deno upgrade..." -PercentComplete -1
-            $updateOutput = (deno upgrade 2>&1) | Out-String
-            Write-Progress -Activity "Updating Deno" -Completed
-
-            $newDenoVersion = ((deno -v | Select-Object -First 1).Split(' ')[1]).Trim()
-            Write-Host "✅ Deno updated successfully ($currentDenoVersion -> $newDenoVersion)." -ForegroundColor Green
-        }
-    } catch {
-        Write-Progress -Activity "Updating Deno" -Completed
-        Write-Host "❌ Could not check/update Deno: $($_.Exception.Message)" -ForegroundColor Red
-    }
-
-    # ---------------------------------------------------------------------------
     # Claude Code
     # ---------------------------------------------------------------------------
     Write-SectionHeader "Claude Code"
@@ -300,49 +252,6 @@ function Get-UpdateTools {
     } catch {
         Write-Progress -Activity "Checking Antigravity CLI" -Completed
         Write-Host "❌ Could not check/update Antigravity CLI (agy): $($_.Exception.Message)" -ForegroundColor Red
-    }
-
-    # ---------------------------------------------------------------------------
-    # Grok CLI (grok)
-    # ---------------------------------------------------------------------------
-    Write-SectionHeader "Grok CLI (grok)"
-    try {
-        $rawGrokVersion = (grok --version 2>$null | Out-String).Trim()
-        $currentGrokVersion = if ($rawGrokVersion -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { $null }
-        if ($currentGrokVersion) {
-            Write-Host "Installed Version: $currentGrokVersion" -ForegroundColor Gray
-        }
-        Write-Host "🔍 Checking for Grok CLI updates..." -ForegroundColor Gray
-
-        $checkOutput = (grok update --check --json 2>$null) | Out-String
-        if ($checkOutput) {
-            $checkObj = $checkOutput | ConvertFrom-Json
-            if ($checkObj.updateAvailable -eq $true) {
-                $latestGrokVersion = $checkObj.latestVersion
-                Write-Host "⚠️  Newer version available ($latestGrokVersion). Updating Grok CLI (grok)..." -ForegroundColor Yellow
-                Write-Progress -Activity "Updating Grok CLI" -Status "Running grok update..." -PercentComplete -1
-                $updateOutput = (grok update 2>&1) | Out-String
-                Write-Progress -Activity "Updating Grok CLI" -Completed
-
-                $rawNewGrok = (grok --version 2>$null | Out-String).Trim()
-                $newGrokVersion = if ($rawNewGrok -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { $latestGrokVersion }
-                Write-Host "✅ Grok CLI (grok) updated successfully ($currentGrokVersion -> $newGrokVersion)." -ForegroundColor Green
-            } else {
-                Write-Host "✅ Grok CLI (grok) is already up to date." -ForegroundColor Green
-            }
-        } else {
-            $updateOutput = (grok update 2>&1) | Out-String
-            if ($updateOutput -match "Already up to date|up to date|latest") {
-                Write-Host "✅ Grok CLI (grok) is already up to date." -ForegroundColor Green
-            } else {
-                $rawNewGrok = (grok --version 2>$null | Out-String).Trim()
-                $newGrokVersion = if ($rawNewGrok -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { "latest" }
-                Write-Host "✅ Grok CLI (grok) updated successfully ($currentGrokVersion -> $newGrokVersion)." -ForegroundColor Green
-            }
-        }
-    } catch {
-        Write-Progress -Activity "Updating Grok CLI" -Completed
-        Write-Host "❌ Could not check/update Grok CLI (grok): $($_.Exception.Message)" -ForegroundColor Red
     }
 
     # ---------------------------------------------------------------------------
