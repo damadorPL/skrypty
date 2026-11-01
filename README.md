@@ -151,3 +151,54 @@ Wykrywa i usuwa stare jądra systemowe (obrazy, nagłówki, moduły), zachowują
 bash linux/remove_old_kernels.sh           # podgląd — lista pakietów do usunięcia
 sudo bash linux/remove_old_kernels.sh exec # usuń stare jądra
 ```
+
+---
+
+## antigravity/statusline.js
+
+> **Cross-platform (Windows / macOS / Linux)** — wymaga środowiska Node.js.
+
+Własny, responsywny pasek stanu (statusline) dla **Antigravity CLI (`agy`)**, stanowiący analogiczną implementację oficjalnych skryptów z `examples/statusline`. Skrypt odbiera obiekt JSON ze stanem sesji przez standardowe wejście (`stdin`) i renderuje zoptymalizowany, kolorowy pasek w stopce interfejsu TUI.
+
+**Kluczowe możliwości:**
+- **Dynamiczna adaptacja do szerokości okna (`terminal_width`)** — zapobiega zawijaniu wierszy. W szerokich oknach prezentuje komplet parametrów z liczbą tokenów i zadaniami, a w wąskich zwięźle redukuje mniej priorytetowe elementy.
+- **Wizualny pasek Context Window** — graficzny pasek zużycia tokenów (`[████░░░░] 45.8%`) z kolorystyką adaptacyjną (zielony < 60%, żółty 60–85%, czerwony > 85%) oraz licznikiem tokenów (np. `153k/1.0M`).
+- **Wskaźnik stanu agenta** — kolorowe odznaki ze stanami: `● IDLE`, `⚡ WORKING`, `⚙ TOOL`, `🔍 REVIEW`, `🔑 AUTH`, `⏳ INIT`, `✖ ERROR`.
+- **Model i poziom myślenia** — nazwa modelu (np. `Gemini 3.8 Flash`) oraz poziom zaangażowania myślenia (`[high]`).
+- **Integracja VCS (Git)** — aktywna gałąź (` main`) oraz wskaźnik niezacommitowanych zmian (`*`).
+- **Metadane sesji** — bieżący katalog roboczy, status piaskownicy (`🛡️ sandbox`), aktywne zadania w tle, artefakty i szacowany koszt.
+- **Brak zewnętrznych zależności** — czysty Node.js (moduły standardowe), czas wykonania < 40 ms.
+- **Tryby zgodności i style** — obsługa trybu ASCII (`--ascii`), stylu minimalistycznego (`--style=minimal`) i wyłączania kolorów ANSI (`--no-color`).
+
+**Aktywacja w Antigravity CLI:**
+1. Przez komendę ukośnika wewnątrz CLI:
+   ```text
+   /statusline node C:/Users/damador/.gemini/statusline.js
+   ```
+   > **Wskazówka (Windows):** Nie otaczaj ścieżki cudzysłowami (np. `"C:\..."`), ponieważ CLI przekaże znaki cudzysłowu dosłownie do interpretera Node.js, co spowoduje błąd `Cannot find module ...\"...\"`. Zamiast tego użyj ukośników (`/`) lub podwójnych ukośników odwrotnych (`\\`) bez cudzysłowów zewnętrznych.
+
+2. Lub w konfiguracji `~/.gemini/antigravity-cli/settings.json`:
+   ```json
+   {
+     "statusLine": {
+       "type": "command",
+       "command": "node C:/Users/damador/.gemini/statusline.js"
+     }
+   }
+   ```
+   lub na Windowsie:
+   ```json
+   {
+     "statusLine": {
+       "type": "command",
+       "command": "node C:\\\\Users\\\\damador\\\\.gemini\\\\statusline.js"
+     }
+   }
+   ```
+
+**Testowanie i podgląd:**
+```powershell
+node antigravity/statusline.js --demo    # interaktywna prezentacja wszystkich stanów agenta
+node antigravity/statusline.js --test    # natychmiastowy test z przykładowym ładunkiem
+node antigravity/statusline.js --help    # wyświetlenie pomocy i dostępnych opcji
+```
