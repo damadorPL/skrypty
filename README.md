@@ -1,6 +1,6 @@
 # SKRYPTY
 
-Zbiór pomocniczych skryptów Python \ PowerShell \ Bash.
+Zbiór pomocniczych skryptów Python \ PowerShell \ Bash \ JavaScript (Node.js).
 
 ---
 
@@ -85,6 +85,32 @@ Definiuje funkcję `Get-UpdateTools`, która sprawdza i aktualizuje narzędzia d
 ```powershell
 . .\powershell\update.ps1   # załaduj funkcję do sesji
 Get-UpdateTools             # uruchom aktualizację
+```
+
+---
+
+## cleanup/cleanup-apps-and-caches.js
+
+> **Windows only** — wymaga środowiska Node.js.
+
+Uniwersalny skrypt czyszczenia starych wersji aplikacji, pamięci podręcznej Node.js oraz menedżerów pakietów na systemie Windows, pozwalający na odzyskanie cennego miejsca na dysku.
+
+**Zakres skanowania i czyszczenia:**
+- **Aplikacje Squirrel i Electron** — przeszukuje katalogi `%LOCALAPPDATA%`, `%LOCALAPPDATA%\Programs` oraz `%APPDATA%`. Wykrywa wersjonowane katalogi wydań (np. `app-X.Y.Z`) oraz starsze kompilacje semver, zachowując najnowszą wersję i usuwając pozostałości po poprzednich aktualizacjach.
+- **Narzędzia deweloperskie w profilu użytkownika** — skanuje wersjonowane wydania narzędzi (m.in. Archon Web Dist, CUA Driver, Copilot CLI, Claude Code, Vite Plus), usuwając nieużywane archiwalne wydania.
+- **Pamięć podręczna Node.js / V8** — wykrywa i usuwa nieaktualne nagłówki C++ w `node-gyp\Cache` (niepowiązane z bieżącą wersją Node.js), tymczasowe cache kompilacji V8 (`node-compile-cache`, `<app>\compile-cache` w katalogu Temp) oraz przestarzały `v8-compile-cache`.
+- **Menedżery pakietów npm i pnpm** — czyści pamięć podręczną npm (`_cacache`, `_npx`) oraz uruchamia `pnpm store prune` (jeśli narzędzie pnpm jest obecne w systemie) w celu zwolnienia nieużywanych pakietów ze wspólnego magazynu.
+
+**Bezpieczeństwo i tryby pracy:**
+- Dokładne porównywanie wersji semver gwarantuje, że aktywne/najnowsze wydanie aplikacji nigdy nie zostanie skasowane.
+- Bezpieczne usuwanie plików z automatycznym zdejmowaniem atrybutów tylko do odczytu i pomijaniem zablokowanych (aktualnie uruchomionych) procesów.
+- Tryb interaktywny z czytelnym podsumowaniem rozmiarów oraz żądaniem potwierdzenia przed operacją.
+
+**Użycie:**
+```powershell
+node cleanup/cleanup-apps-and-caches.js             # skanowanie z pytaniem o potwierdzenie przed usunięciem
+node cleanup/cleanup-apps-and-caches.js --dry-run   # bezpieczny podgląd bez wprowadzania zmian (-d)
+node cleanup/cleanup-apps-and-caches.js --force     # automatyczne czyszczenie bez pytania (-f, -y)
 ```
 
 ---
