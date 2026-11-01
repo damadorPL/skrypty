@@ -158,16 +158,21 @@ sudo bash linux/remove_old_kernels.sh exec # usuń stare jądra
 
 > **Cross-platform (Windows / macOS / Linux)** — wymaga środowiska Node.js.
 
-Własny, responsywny pasek stanu (statusline) dla **Antigravity CLI (`agy`)**, stanowiący analogiczną implementację oficjalnych skryptów z `examples/statusline`. Skrypt odbiera obiekt JSON ze stanem sesji przez standardowe wejście (`stdin`) i renderuje zoptymalizowany, kolorowy pasek w stopce interfejsu TUI.
+![Statusline Preview](antigravity/img/statusline-preview.png)
+
+Własny, responsywny i wysoce konfigurowalny pasek stanu (statusline) dla **Antigravity CLI (`agy`)** oraz **Claude Code**. Skrypt odbiera obiekt JSON ze stanem sesji przez standardowe wejście (`stdin`) i renderuje zoptymalizowany, kolorowy pasek w stopce interfejsu TUI w układzie wielowierszowym (stacked w stylu Claude Code) lub jednoliniowym (inline).
 
 **Kluczowe możliwości:**
-- **Dynamiczna adaptacja do szerokości okna (`terminal_width`)** — zapobiega zawijaniu wierszy. W szerokich oknach prezentuje komplet parametrów z liczbą tokenów i zadaniami, a w wąskich zwięźle redukuje mniej priorytetowe elementy.
-- **Wizualny pasek Context Window** — graficzny pasek zużycia tokenów (`[████░░░░] 45.8%`) z kolorystyką adaptacyjną (zielony < 60%, żółty 60–85%, czerwony > 85%) oraz licznikiem tokenów (np. `153k/1.0M`).
+- **Szczegółowe metryki tokenów** — precyzyjny licznik `Tokens X (in: X, out: X, cache: X)`.
+- **Cache Hit / Miss** — procent trafień w pamięć podręczną prompt cache oraz liczby tokenów z cache vs pominięć (np. `Cache: 99.9% hit (37k hit, 2 miss)` lub `⚡ 99.9% hit`).
+- **Narzędzia i podagenci** — wskaźnik liczby wywołań narzędzi (`🛠️ 86 tools`) oraz aktywnych podagentów (`🤖 2 subagents`).
+- **Dwa tryby układu** — wielowierszowy stacked (`--layout=stacked`, 5 poziomów metryk jak w Claude Code) oraz adaptacyjny jednoliniowy (`--layout=inline`).
+- **Dynamiczna adaptacja do szerokości okna (`terminal_width`)** — zapobiega zawijaniu wierszy w terminalu.
+- **Wizualny pasek Context Window** — graficzny pasek zużycia tokenów (`[████░░░░] 45.8%`) z kolorystyką adaptacyjną (zielony < 60%, żółty 60–85%, czerwony > 85%).
 - **Wskaźnik stanu agenta** — kolorowe odznaki ze stanami: `● IDLE`, `⚡ WORKING`, `⚙ TOOL`, `🔍 REVIEW`, `🔑 AUTH`, `⏳ INIT`, `✖ ERROR`.
 - **Model i poziom myślenia** — nazwa modelu (np. `Gemini 3.8 Flash`) oraz poziom zaangażowania myślenia (`[high]`).
 - **Integracja VCS (Git)** — aktywna gałąź (` main`) oraz wskaźnik niezacommitowanych zmian (`*`).
-- **Metadane sesji** — bieżący katalog roboczy, status piaskownicy (`🛡️ sandbox`), aktywne zadania w tle, artefakty i szacowany koszt.
-- **Brak zewnętrznych zależności** — czysty Node.js (moduły standardowe), czas wykonania < 40 ms.
+- **Brak zewnętrznych zależności** — czysty Node.js (moduły standardowe), czas wykonania < 20 ms.
 - **Tryby zgodności i style** — obsługa trybu ASCII (`--ascii`), stylu minimalistycznego (`--style=minimal`) i wyłączania kolorów ANSI (`--no-color`).
 
 **Aktywacja w Antigravity CLI:**
