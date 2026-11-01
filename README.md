@@ -207,3 +207,54 @@ node antigravity/statusline.js --demo    # interaktywna prezentacja wszystkich s
 node antigravity/statusline.js --test    # natychmiastowy test z przykładowym ładunkiem
 node antigravity/statusline.js --help    # wyświetlenie pomocy i dostępnych opcji
 ```
+
+---
+
+## cloudflare/apply-wp-settings.js
+
+> **Cross-platform (Windows / macOS / Linux)** — wymaga środowiska Node.js (v18+, zero zewnętrznych zależności npm).
+
+Lekki skrypt automatyzujący wdrażanie rekomendowanych i bezpiecznych ustawień Cloudflare dla stron opartych na silniku WordPress za pośrednictwem oficjalnego Cloudflare REST API.
+
+Skrypt współpracuje z uniwersalnym szablonem konfiguracyjnym [`cloudflare/cloudflare-wordpress-template.json`](cloudflare/cloudflare-wordpress-template.json), kompatybilnym zarówno z darmowymi, jak i płatnymi planami Cloudflare.
+
+**Zakres konfiguracji w szablonie:**
+- **Ustawienia strefy i wydajności (Zone & Performance Settings):**
+  - Wymuszenie HTTPS (`always_use_https: on`) oraz automatyczne przepisywanie linków (`automatic_https_rewrites: on`)
+  - Minimalna wersja TLS 1.2 oraz obsługa TLS 1.3 z 0-RTT (`tls_1_3: zrt`, `0rtt: on`)
+  - Kompresja Brotli (`brotli: on`) oraz wsparcie Early Hints (`early_hints: on`)
+  - Wyłączenie Rocket Loader (`rocket_loader: off`, zapobiega konfliktom z bibliotekami jQuery i wtyczkami WordPress)
+  - Agresywne buforowanie standardowe (`cache_level: aggressive`), Browser Integrity Check (`browser_check: on`) oraz Browser Cache TTL respektujący nagłówki serwera źródłowego (`browser_cache_ttl: 0`)
+  - Poziom ochrony `medium`, Challenge TTL 30 minut, obsługa IPv6, WebSockets, geolokalizacji IP i ukrywania adresów e-mail
+- **Ochrona przed botami:**
+  - Aktywacja bezpłatnego trybu **Bot Fight Mode** (`fight_mode: true`, `enable_js: true`)
+- **Nagłówki odpowiedzi (Managed Response Headers):**
+  - Usuwanie nagłówka `X-Powered-By` ujawniającego wersję PHP i serwera WWW
+- **Niestandardowe reguły pamięci podręcznej (Cache Rules):**
+  - Omijanie pamięci podręcznej dla panelu administracyjnego i logowania (`/wp-admin/`, `wp-login.php`, ciasteczko `wordpress_logged_in`)
+  - Buforowanie zasobów statycznych w `/wp-content/` (obrazy, arkusze stylów, skrypty, fonty) z czasem Edge TTL wynoszącym 7 dni oraz Browser TTL wynoszącym 1 miesiąc
+- **Reguły zapory sieciowej WAF (Custom WAF Rules):**
+  - Blokowanie wrażliwych plików WordPress (`/wp-config.php`, `/xmlrpc.php`)
+  - Managed Challenge dla formularza logowania (`/wp-login.php`) chroniący przed atakami brute-force
+  - Blokowanie zautomatyzowanych skanerów, scraperów (m.in. `scrapy`, `python-requests`, `Go-http-client`, `leakix.net`) oraz żądań z pustym nagłówkiem User-Agent
+
+**Obsługa tokena API Cloudflare:**
+Skrypt automatycznie poszukuje tokena w:
+1. Parametrze wiersza poleceń: `--token <TOKEN>`
+2. Zmiennej środowiskowej: `CLOUDFLARE_API_TOKEN`
+3. Lokalnym pliku konfiguracyjnym narzędzia `cf` CLI (`default.json`)
+
+**Użycie:**
+```powershell
+# Podgląd operacji bez wprowadzania zmian (Dry Run)
+node cloudflare/apply-wp-settings.js --zone example.com --dry-run
+
+# Wdrożenie ustawień dla domeny
+node cloudflare/apply-wp-settings.js --zone example.com
+
+# Przekazanie tokena w parametrze
+node cloudflare/apply-wp-settings.js --zone example.com --token your_cf_api_token_here
+
+# Użycie niestandardowego pliku szablonu
+node cloudflare/apply-wp-settings.js --zone example.com --template ./custom-template.json
+```

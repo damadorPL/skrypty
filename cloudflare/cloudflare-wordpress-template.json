@@ -1,0 +1,84 @@
+{
+  "version": "1.0.0",
+  "name": "Cloudflare Universal WordPress Settings Template",
+  "description": "Universal Cloudflare configuration template optimized for WordPress websites (compatible with Free and Paid plans)",
+  "zone_settings": {
+    "browser_cache_ttl": 0,
+    "always_use_https": "on",
+    "automatic_https_rewrites": "on",
+    "min_tls_version": "1.2",
+    "tls_1_3": "zrt",
+    "0rtt": "on",
+    "brotli": "on",
+    "early_hints": "on",
+    "cache_level": "aggressive",
+    "browser_check": "on",
+    "security_level": "medium",
+    "challenge_ttl": 1800,
+    "ipv6": "on",
+    "websockets": "on",
+    "ip_geolocation": "on",
+    "email_obfuscation": "on",
+    "rocket_loader": "off"
+  },
+  "bot_management": {
+    "fight_mode": true,
+    "enable_js": true
+  },
+  "managed_headers": {
+    "managed_response_headers": [
+      {
+        "id": "remove_x-powered-by_header",
+        "enabled": true
+      }
+    ]
+  },
+  "cache_rules": [
+    {
+      "description": "WP - Bypass WP-Admin & Login",
+      "enabled": true,
+      "expression": "(http.request.uri.path contains \"/wp-admin/\") or (http.request.uri.path contains \"wp-login.php\") or (http.cookie contains \"wordpress_logged_in\")",
+      "action": "set_cache_settings",
+      "action_parameters": {
+        "cache": false
+      }
+    },
+    {
+      "description": "WP - Cache wp-content Assets",
+      "enabled": true,
+      "expression": "(http.request.uri.path contains \"/wp-content/\" and http.request.uri.path.extension in {\"jpg\" \"jpeg\" \"png\" \"webp\" \"avif\" \"gif\" \"svg\" \"ico\" \"css\" \"js\" \"woff\" \"woff2\" \"ttf\" \"eot\" \"pdf\" \"mp4\"})",
+      "action": "set_cache_settings",
+      "action_parameters": {
+        "cache": true,
+        "edge_ttl": {
+          "mode": "override_origin",
+          "default": 604800
+        },
+        "browser_ttl": {
+          "mode": "override_origin",
+          "default": 2678400
+        }
+      }
+    }
+  ],
+  "waf_rules": [
+    {
+      "description": "Block sensitive WP files (wp-config and xmlrpc)",
+      "enabled": true,
+      "action": "block",
+      "expression": "(http.request.uri.path contains \"/wp-config.php\") or (http.request.uri.path contains \"/xmlrpc.php\")"
+    },
+    {
+      "description": "WAF Wp-login (Managed Challenge)",
+      "enabled": true,
+      "action": "managed_challenge",
+      "expression": "(http.request.uri.path contains \"/wp-login.php\")"
+    },
+    {
+      "description": "Block common automated bots and scrapers",
+      "enabled": true,
+      "action": "block",
+      "expression": "(http.user_agent contains \"Go-http-client\") or (http.user_agent contains \"ALittle Client\") or (http.user_agent contains \"python-requests\") or (http.user_agent contains \"scrapy\") or (http.user_agent eq \"\") or (http.user_agent contains \"leakix.net\") or (http.user_agent contains \"Barkrowler\") or (http.user_agent contains \"DataForSeoBot\")"
+    }
+  ]
+}
