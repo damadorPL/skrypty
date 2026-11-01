@@ -216,7 +216,7 @@ node antigravity/statusline.js --help    # wyświetlenie pomocy i dostępnych op
 
 Lekki skrypt automatyzujący wdrażanie rekomendowanych i bezpiecznych ustawień Cloudflare dla stron opartych na silniku WordPress za pośrednictwem oficjalnego Cloudflare REST API.
 
-Skrypt współpracuje z uniwersalnym szablonem konfiguracyjnym [`cloudflare/cloudflare-wordpress-template.json`](cloudflare/cloudflare-wordpress-template.json), kompatybilnym zarówno z darmowymi, jak i płatnymi planami Cloudflare.
+Skrypt współpracuje z uniwersalnym szablonem konfiguracyjnym [`cloudflare/cloudflare-wordpress-template.json`](cloudflare/cloudflare-wordpress-template.json), kompatybilnym zarówno z darmowymi, jak i płatnymi planami Cloudflare. Szczegółowy opis znajduje się w [`cloudflare/README.md`](cloudflare/README.md).
 
 **Zakres konfiguracji w szablonie:**
 - **Ustawienia strefy i wydajności (Zone & Performance Settings):**
@@ -226,7 +226,7 @@ Skrypt współpracuje z uniwersalnym szablonem konfiguracyjnym [`cloudflare/clou
   - Wyłączenie Rocket Loader (`rocket_loader: off`, zapobiega konfliktom z bibliotekami jQuery i wtyczkami WordPress)
   - Agresywne buforowanie standardowe (`cache_level: aggressive`), Browser Integrity Check (`browser_check: on`) oraz Browser Cache TTL respektujący nagłówki serwera źródłowego (`browser_cache_ttl: 0`)
   - Poziom ochrony `medium`, Challenge TTL 30 minut, obsługa IPv6, WebSockets, geolokalizacji IP i ukrywania adresów e-mail
-- **Ochrona przed botami:**
+- **Ochrona przed botami (Bot Protection):**
   - Aktywacja bezpłatnego trybu **Bot Fight Mode** (`fight_mode: true`, `enable_js: true`)
 - **Nagłówki odpowiedzi (Managed Response Headers):**
   - Usuwanie nagłówka `X-Powered-By` ujawniającego wersję PHP i serwera WWW
@@ -234,9 +234,13 @@ Skrypt współpracuje z uniwersalnym szablonem konfiguracyjnym [`cloudflare/clou
   - Omijanie pamięci podręcznej dla panelu administracyjnego i logowania (`/wp-admin/`, `wp-login.php`, ciasteczko `wordpress_logged_in`)
   - Buforowanie zasobów statycznych w `/wp-content/` (obrazy, arkusze stylów, skrypty, fonty) z czasem Edge TTL wynoszącym 7 dni oraz Browser TTL wynoszącym 1 miesiąc
 - **Reguły zapory sieciowej WAF (Custom WAF Rules):**
-  - Blokowanie wrażliwych plików WordPress (`/wp-config.php`, `/xmlrpc.php`)
-  - Managed Challenge dla formularza logowania (`/wp-login.php`) chroniący przed atakami brute-force
-  - Blokowanie zautomatyzowanych skanerów, scraperów (m.in. `scrapy`, `python-requests`, `Go-http-client`, `leakix.net`) oraz żądań z pustym nagłówkiem User-Agent
+  - Blokada `/xmlrpc.php` (ochrona przed atakami multicall brute-force i amplifikacją DDoS)
+  - Blokada `/wp-cron.php` wywoływanego bezpośrednio przez publiczne żądania HTTP
+  - Managed Challenge dla formularza logowania (`/wp-login.php`) oraz panelu `/wp-admin/` (z wyłączeniem `admin-ajax.php` i `admin-post.php`)
+  - Blokada pobierania wrażliwych rozszerzeń i kopii zapasowych (`.sql`, `.bak`, `.log`, `.env`, `.old`, `.tar`), z wyjątkiem katalogu `/wp-content/uploads/`
+  - Blokada bezpośredniego uruchamiania plików `.php` poza oficjalnymi punktami wejścia WordPressa oraz blokada klientów z pustym nagłówkiem User-Agent
+- **Reguły ograniczania liczby żądań (Rate Limiting Rules):**
+  - Rate limiting dla żądań `POST /wp-login.php` (maks. 5 żądań w ciągu 10 sekund per IP z 10-sekundową blokadą) skutecznie zapobiegający atakom credential stuffing i brute-force
 
 **Obsługa tokena API Cloudflare:**
 Skrypt automatycznie poszukuje tokena w:

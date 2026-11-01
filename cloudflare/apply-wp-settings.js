@@ -202,13 +202,8 @@ async function run() {
       try {
         const rules = [...template.cache_rules];
         if (existingRuleset && existingRuleset.id) {
-          // Merge existing rules that are not in template
-          const existingOtherRules = (existingRuleset.rules || []).filter(
-            er => !template.cache_rules.some(tr => tr.description === er.description)
-          );
-          const finalRules = [...rules, ...existingOtherRules];
-          await cfRequest(`/zones/${zoneId}/rulesets/${existingRuleset.id}`, 'PUT', { rules: finalRules });
-          console.log(`   ✓ Updated cache ruleset with ${rules.length} template rules.`);
+          await cfRequest(`/zones/${zoneId}/rulesets/${existingRuleset.id}`, 'PUT', { rules });
+          console.log(`   ✓ Updated cache ruleset with ${rules.length} rules.`);
         } else {
           await cfRequest(`/zones/${zoneId}/rulesets`, 'POST', {
             name: "default",
@@ -216,7 +211,7 @@ async function run() {
             phase: phase,
             rules: rules
           });
-          console.log(`   ✓ Created new cache ruleset with ${rules.length} template rules.`);
+          console.log(`   ✓ Created new cache ruleset with ${rules.length} rules.`);
         }
       } catch (err) {
         console.warn(`   ⚠️  Failed to deploy Cache Rules: ${err.message}`);
@@ -241,13 +236,8 @@ async function run() {
       try {
         const rules = [...template.waf_rules];
         if (existingRuleset && existingRuleset.id) {
-          // Keep existing rules not overwritten by template
-          const existingOtherRules = (existingRuleset.rules || []).filter(
-            er => !template.waf_rules.some(tr => tr.description === er.description)
-          );
-          const finalRules = [...rules, ...existingOtherRules];
-          await cfRequest(`/zones/${zoneId}/rulesets/${existingRuleset.id}`, 'PUT', { rules: finalRules });
-          console.log(`   ✓ Updated custom WAF ruleset with ${rules.length} template rules.`);
+          await cfRequest(`/zones/${zoneId}/rulesets/${existingRuleset.id}`, 'PUT', { rules });
+          console.log(`   ✓ Updated custom WAF ruleset with ${rules.length} rules.`);
         } else {
           await cfRequest(`/zones/${zoneId}/rulesets`, 'POST', {
             name: "default",
@@ -255,10 +245,44 @@ async function run() {
             phase: phase,
             rules: rules
           });
-          console.log(`   ✓ Created new custom WAF ruleset with ${rules.length} template rules.`);
+          console.log(`   ✓ Created new custom WAF ruleset with ${rules.length} rules.`);
         }
       } catch (err) {
         console.warn(`   ⚠️  Failed to deploy Custom WAF Rules: ${err.message}`);
+      }
+    }
+    console.log('');
+  }
+
+  // 7. Apply Rate Limiting Rules
+  if (template.rate_limiting_rules && template.rate_limiting_rules.length > 0) {
+    console.log(`⏱️  Applying Rate Limiting Rules...`);
+    const phase = 'http_ratelimit';
+    let existingRuleset = null;
+    try {
+      existingRuleset = await cfRequest(`/zones/${zoneId}/rulesets/phases/${phase}/entrypoint`);
+    } catch (_) {}
+
+    if (isDryRun) {
+      console.log(`   [DRY-RUN] Would deploy ${template.rate_limiting_rules.length} Rate Limiting Rules to phase "${phase}":`);
+      template.rate_limiting_rules.forEach(r => console.log(`     - [${r.action}] ${r.description}`));
+    } else {
+      try {
+        const rules = [...template.rate_limiting_rules];
+        if (existingRuleset && existingRuleset.id) {
+          await cfRequest(`/zones/${zoneId}/rulesets/${existingRuleset.id}`, 'PUT', { rules });
+          console.log(`   ✓ Updated rate limiting ruleset with ${rules.length} rules.`);
+        } else {
+          await cfRequest(`/zones/${zoneId}/rulesets`, 'POST', {
+            name: "default",
+            kind: "zone",
+            phase: phase,
+            rules: rules
+          });
+          console.log(`   ✓ Created new rate limiting ruleset with ${rules.length} rules.`);
+        }
+      } catch (err) {
+        console.warn(`   ⚠️  Failed to deploy Rate Limiting Rules: ${err.message}`);
       }
     }
     console.log('');

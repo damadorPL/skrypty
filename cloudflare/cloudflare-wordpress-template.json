@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Cloudflare Universal WordPress Settings Template",
   "description": "Universal Cloudflare configuration template optimized for WordPress websites (compatible with Free and Paid plans)",
   "zone_settings": {
@@ -63,22 +63,51 @@
   ],
   "waf_rules": [
     {
-      "description": "Block sensitive WP files (wp-config and xmlrpc)",
+      "description": "1. Block /xmlrpc.php",
       "enabled": true,
       "action": "block",
-      "expression": "(http.request.uri.path contains \"/wp-config.php\") or (http.request.uri.path contains \"/xmlrpc.php\")"
+      "expression": "(http.request.uri.path eq \"/xmlrpc.php\") or (http.request.uri.path contains \"/xmlrpc.php\")"
     },
     {
-      "description": "WAF Wp-login (Managed Challenge)",
+      "description": "2. Block /wp-cron.php over HTTP",
+      "enabled": true,
+      "action": "block",
+      "expression": "(http.request.uri.path eq \"/wp-cron.php\") or (http.request.uri.path contains \"/wp-cron.php\")"
+    },
+    {
+      "description": "3. Managed challenge on wp-login.php and /wp-admin/, except admin-ajax.php and admin-post.php",
       "enabled": true,
       "action": "managed_challenge",
-      "expression": "(http.request.uri.path contains \"/wp-login.php\")"
+      "expression": "((http.request.uri.path contains \"/wp-admin/\") or (http.request.uri.path contains \"/wp-login.php\")) and not (http.request.uri.path contains \"/wp-admin/admin-ajax.php\") and not (http.request.uri.path contains \"/wp-admin/admin-post.php\")"
     },
     {
-      "description": "Block common automated bots and scrapers",
+      "description": "4. Block sensitive file types (.sql, .bak, .log, .env, .old, .tar), except under /wp-content/uploads/",
       "enabled": true,
       "action": "block",
-      "expression": "(http.user_agent contains \"Go-http-client\") or (http.user_agent contains \"ALittle Client\") or (http.user_agent contains \"python-requests\") or (http.user_agent contains \"scrapy\") or (http.user_agent eq \"\") or (http.user_agent contains \"leakix.net\") or (http.user_agent contains \"Barkrowler\") or (http.user_agent contains \"DataForSeoBot\")"
+      "expression": "(http.request.uri.path.extension in {\"sql\" \"bak\" \"log\" \"env\" \"old\" \"tar\"} or (http.request.uri.path contains \"/.env\")) and not (http.request.uri.path contains \"/wp-content/uploads/\")"
+    },
+    {
+      "description": "5. Block every .php file outside WordPress entry points, plus empty user agent",
+      "enabled": true,
+      "action": "block",
+      "expression": "((http.request.uri.path.extension eq \"php\" or ends_with(http.request.uri.path, \".php\")) and not (http.request.uri.path in {\"/index.php\" \"/wp-login.php\" \"/wp-comments-post.php\" \"/wp-signup.php\" \"/wp-activate.php\"}) and not (http.request.uri.path contains \"/wp-admin/\")) or (http.user_agent eq \"\")"
+    }
+  ],
+  "rate_limiting_rules": [
+    {
+      "description": "Rate limiting: POST /wp-login.php (5 req/10s per IP, blocked for 10s)",
+      "enabled": true,
+      "action": "block",
+      "expression": "http.request.method eq \"POST\" and (http.request.uri.path eq \"/wp-login.php\" or http.request.uri.path contains \"/wp-login.php\")",
+      "ratelimit": {
+        "characteristics": [
+          "cf.colo.id",
+          "ip.src"
+        ],
+        "period": 10,
+        "requests_per_period": 5,
+        "mitigation_timeout": 10
+      }
     }
   ]
 }
