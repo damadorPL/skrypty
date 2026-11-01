@@ -173,16 +173,16 @@ Własny, responsywny pasek stanu (statusline) dla **Antigravity CLI (`agy`)**, s
 **Aktywacja w Antigravity CLI:**
 1. Przez komendę ukośnika wewnątrz CLI:
    ```text
-   /statusline node C:/Users/damador/.gemini/statusline.js
+   /statusline node <pełna-ścieżka-do-skryptu>/statusline.js
    ```
-   > **Wskazówka (Windows):** Nie otaczaj ścieżki cudzysłowami (np. `"C:\..."`), ponieważ CLI przekaże znaki cudzysłowu dosłownie do interpretera Node.js, co spowoduje błąd `Cannot find module ...\"...\"`. Zamiast tego użyj ukośników (`/`) lub podwójnych ukośników odwrotnych (`\\`) bez cudzysłowów zewnętrznych.
+   > **Wskazówka (Windows):** Nie otaczaj ścieżki cudzysłowami (np. `"C:\..."`), ponieważ CLI przekaże znaki cudzysłowu dosłownie do interpretera Node.js, co spowoduje błąd `Cannot find module ...\"...\"`. Zamiast tego podaj ścieżkę bez cudzysłowów zewnętrznych, używając ukośników `/` lub `\\` (np. `node C:/Users/<użytkownik>/.gemini/statusline.js`).
 
 2. Lub w konfiguracji `~/.gemini/antigravity-cli/settings.json`:
    ```json
    {
      "statusLine": {
        "type": "command",
-       "command": "node C:/Users/damador/.gemini/statusline.js"
+       "command": "node <pełna-ścieżka-do-skryptu>/statusline.js"
      }
    }
    ```
@@ -191,7 +191,7 @@ Własny, responsywny pasek stanu (statusline) dla **Antigravity CLI (`agy`)**, s
    {
      "statusLine": {
        "type": "command",
-       "command": "node C:\\\\Users\\\\damador\\\\.gemini\\\\statusline.js"
+       "command": "node C:\\\\Users\\\\<użytkownik>\\\\.gemini\\\\statusline.js"
      }
    }
    ```
