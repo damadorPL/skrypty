@@ -5,8 +5,9 @@ Discovers every Python installation on the system and upgrades pip in each one.
 
 Discovery searches (in order):
   1. `py --list-paths` (Python Launcher for Windows)
-  2. Common install directories (Program Files, AppData, Anaconda, etc.)
-  3. PATH entries
+  2. `uv python list --only-installed` (uv toolchains)
+  3. Common install directories (Program Files, AppData, uv, Anaconda, etc.)
+  4. PATH entries
 
 Run:       python update_pip.py
 Dry-run:   python update_pip.py --dry-run
@@ -25,6 +26,9 @@ SEARCH_ROOTS = [
     r"C:\Program Files (x86)\Python*",
     os.path.expandvars(r"%LOCALAPPDATA%\Programs\Python\Python*"),
     os.path.expandvars(r"%APPDATA%\Python\Python*"),
+    os.path.expandvars(r"%APPDATA%\uv\python\*"),
+    os.path.expandvars(r"%LOCALAPPDATA%\uv\python\*"),
+    os.path.expandvars(r"%USERPROFILE%\.local\share\uv\python\*"),
     r"C:\Anaconda*",
     r"C:\ProgramData\Anaconda*",
     r"C:\Miniconda*",
@@ -45,6 +49,29 @@ def find_via_py_launcher() -> list[str]:
             if len(parts) >= 2:
                 candidate = parts[-1]
                 if candidate.lower().endswith("python.exe") and os.path.isfile(candidate):
+                    exes.append(os.path.normpath(candidate))
+    except Exception:
+        pass
+    return exes
+
+
+def find_via_uv() -> list[str]:
+    exes = []
+    try:
+        out = subprocess.run(
+            ["uv", "python", "list", "--only-installed"],
+            capture_output=True, text=True, timeout=10
+        )
+        home = os.path.expanduser("~")
+        for line in out.stdout.splitlines():
+            parts = line.strip().split()
+            if len(parts) >= 2:
+                candidate = parts[-1]
+                if not os.path.isabs(candidate):
+                    candidate = os.path.join(home, candidate)
+                if candidate.lower().endswith("python.exe") and os.path.isfile(candidate):
+                    exes.append(os.path.normpath(candidate))
+                elif candidate.endswith("python") and os.path.isfile(candidate):
                     exes.append(os.path.normpath(candidate))
     except Exception:
         pass
@@ -96,6 +123,7 @@ def get_version(exe: str) -> str:
 def discover_pythons() -> list[str]:
     candidates: list[str] = []
     candidates += find_via_py_launcher()
+    candidates += find_via_uv()
     candidates += find_via_glob()
     candidates += find_via_path()
 
@@ -119,16 +147,17 @@ def discover_pythons() -> list[str]:
     return valid
 
 
-def run(cmd: list[str], dry: bool = False) -> None:
+def run(cmd: list[str], dry: bool = False) -> int:
     print(f"    {'[DRY] ' if dry else ''}> {' '.join(cmd)}")
     if dry:
-        return
+        return 0
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.stdout.strip():
         for line in result.stdout.strip().splitlines():
             print(f"    {line}")
     if result.returncode != 0 and result.stderr.strip():
         print(f"    WARNING: {result.stderr.strip()}")
+    return result.returncode
 
 
 def upgrade_pip(exe: str, dry: bool) -> None:
@@ -137,7 +166,10 @@ def upgrade_pip(exe: str, dry: bool) -> None:
     print(f"  {version}")
     print(f"  {exe}")
     print(f"{'='*60}")
-    run([exe, "-m", "pip", "install", "--upgrade", "pip"], dry)
+    ret = run([exe, "-m", "pip", "install", "--upgrade", "pip"], dry)
+    if ret != 0 and not dry:
+        print("    Retrying with --break-system-packages (for PEP 668 / uv environments)...")
+        run([exe, "-m", "pip", "install", "--upgrade", "pip", "--break-system-packages"], dry)
 
 
 def main():
