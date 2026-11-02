@@ -212,44 +212,79 @@ function formatAgentState(state, isAscii = false) {
   }
 }
 
+// --- Session Lifecycle & Trans Cache Constants ---
+const SESSION_STATE_FILE = path.join(os.tmpdir(), 'agy_statusline_session.json');
+const TRANS_CACHE_FILE = path.join(os.tmpdir(), 'agy_statusline_trans_cache.json');
+
 /**
- * Searches for active conversation transcript.
+ * Handles session lifecycle: detects new session on startup load or /new command,
+ * and clears stale transcript cache / status data.
  */
-function findTranscriptPath(payload) {
-  if (payload.transcript_path && fs.existsSync(payload.transcript_path)) {
-    return payload.transcript_path;
-  }
-
-  const userHome = process.env.USERPROFILE || process.env.HOME || '';
-
-  // Antigravity conversation_id from payload or env
-  const convId = payload.conversation_id || process.env.CONVERSATION_ID;
-  if (convId) {
-    const candidate = path.join(userHome, '.gemini', 'antigravity-cli', 'brain', convId, '.system_generated', 'logs', 'transcript.jsonl');
-    if (fs.existsSync(candidate)) return candidate;
-  }
-
-  // Check most recent conversation transcript in ~/.gemini/antigravity-cli/brain/*/
+function handleSessionLifecycle(sessionId) {
+  let savedState = null;
   try {
-    const brainDir = path.join(userHome, '.gemini', 'antigravity-cli', 'brain');
-    if (fs.existsSync(brainDir)) {
-      const dirs = fs.readdirSync(brainDir);
-      let latestFile = null;
-      let latestMtime = 0;
-      for (const d of dirs) {
-        if (d === 'scratch' || d.startsWith('.')) continue;
-        const candidate = path.join(brainDir, d, '.system_generated', 'logs', 'transcript.jsonl');
-        try {
-          const stat = fs.statSync(candidate);
-          if (stat.mtimeMs > latestMtime) {
-            latestMtime = stat.mtimeMs;
-            latestFile = candidate;
-          }
-        } catch {}
-      }
-      if (latestFile) return latestFile;
+    if (fs.existsSync(SESSION_STATE_FILE)) {
+      savedState = JSON.parse(fs.readFileSync(SESSION_STATE_FILE, 'utf8'));
     }
   } catch {}
+
+  const isNewSession = Boolean(sessionId && (!savedState || savedState.sessionId !== sessionId));
+
+  if (isNewSession) {
+    // Clear transcript cache immediately when loading a new session or running /new
+    try {
+      if (fs.existsSync(TRANS_CACHE_FILE)) {
+        fs.unlinkSync(TRANS_CACHE_FILE);
+      }
+    } catch {}
+
+    const newState = {
+      sessionId,
+      startTime: Date.now()
+    };
+
+    try {
+      fs.writeFileSync(SESSION_STATE_FILE, JSON.stringify(newState), 'utf8');
+    } catch {}
+
+    return { isNewSession: true, startTime: newState.startTime };
+  }
+
+  return { isNewSession: false, startTime: savedState?.startTime || Date.now() };
+}
+
+/**
+ * Searches for active conversation transcript.
+ * Strictly resolves to the current session transcript. Does NOT fall back to older
+ * transcripts from other conversations, ensuring status data and usages stay clean on load and /new.
+ */
+function findTranscriptPath(payload) {
+  const userHome = process.env.USERPROFILE || process.env.HOME || '';
+
+  // 1. Explicit transcript path from payload
+  if (payload.transcript_path) {
+    const rawPath = payload.transcript_path;
+    if (fs.existsSync(rawPath)) return rawPath;
+
+    // Handle Antigravity directory path discrepancy: .gemini/antigravity -> .gemini/antigravity-cli
+    const normalized = rawPath.replace(/([\\/])\.gemini[\\/]antigravity[\\/]/i, '$1.gemini$1antigravity-cli$1');
+    if (fs.existsSync(normalized)) return normalized;
+  }
+
+  // 2. Antigravity conversation_id or session_id
+  const convId = payload.conversation_id || payload.session_id || process.env.CONVERSATION_ID;
+  if (convId) {
+    const candidates = [
+      path.join(userHome, '.gemini', 'antigravity-cli', 'brain', convId, '.system_generated', 'logs', 'transcript.jsonl'),
+      path.join(userHome, '.gemini', 'antigravity', 'brain', convId, '.system_generated', 'logs', 'transcript.jsonl')
+    ];
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate)) return candidate;
+    }
+    // If conversation_id is specified but transcript file doesn't exist yet,
+    // this is a fresh conversation (on load or /new). Never load older transcripts!
+    return null;
+  }
 
   return null;
 }
@@ -262,7 +297,22 @@ function getTranscriptStats(filePath) {
 
   try {
     const stat = fs.statSync(filePath);
-    const cacheFile = path.join(os.tmpdir(), 'agy_statusline_trans_cache.json');
+    if (!stat.size) {
+      return {
+        totalIn: 0,
+        totalOut: 0,
+        totalCacheRead: 0,
+        totalCacheCreation: 0,
+        toolCounts: {},
+        totalTools: 0,
+        subagentsCount: 0,
+        lastTool: null,
+        startTime: null,
+        endTime: null
+      };
+    }
+
+    const cacheFile = TRANS_CACHE_FILE;
     let cache = null;
 
     try {
@@ -418,32 +468,63 @@ function getContextFiles(cwd) {
  * Aggregates all metrics from payload and transcripts.
  */
 function extractMetrics(payload) {
+  const convId = payload.conversation_id || payload.session_id || process.env.CONVERSATION_ID;
+  const sessionInfo = handleSessionLifecycle(convId);
   const transPath = findTranscriptPath(payload);
   const trans = transPath ? getTranscriptStats(transPath) : null;
 
   const ctx = payload.context_window || {};
   const cwd = payload.cwd || payload.workspace?.current_dir || process.cwd();
 
+  // Determine if this is a fresh session (loading or /new) without user message activity yet
+  const hasTransData = Boolean(trans && (trans.totalIn > 0 || trans.totalOut > 0 || trans.totalTools > 0 || trans.totalCacheRead > 0));
+  const hasCtxData = (typeof ctx.total_input_tokens === 'number' && ctx.total_input_tokens > 0) ||
+                     (typeof ctx.total_output_tokens === 'number' && ctx.total_output_tokens > 0) ||
+                     (typeof ctx.used_percentage === 'number' && ctx.used_percentage > 0);
+  const isFresh = !hasTransData && !hasCtxData;
+
   // Tokens
-  const inTokens = typeof ctx.total_input_tokens === 'number'
+  const inTokens = isFresh ? 0 : (typeof ctx.total_input_tokens === 'number'
     ? ctx.total_input_tokens
-    : (payload.tokens?.in ?? trans?.totalIn ?? 0);
+    : (payload.tokens?.in ?? trans?.totalIn ?? 0));
 
-  const outTokens = typeof ctx.total_output_tokens === 'number'
+  const outTokens = isFresh ? 0 : (typeof ctx.total_output_tokens === 'number'
     ? ctx.total_output_tokens
-    : (payload.tokens?.out ?? trans?.totalOut ?? 0);
+    : (payload.tokens?.out ?? trans?.totalOut ?? 0));
 
-  const cacheReadTokens = typeof ctx.cache_read_tokens === 'number'
-    ? ctx.cache_read_tokens
-    : (typeof ctx.cache_read_input_tokens === 'number'
-        ? ctx.cache_read_input_tokens
-        : (payload.tokens?.cache ?? payload.cache?.read_tokens ?? trans?.totalCacheRead ?? 0));
+  let cacheReadTokens = 0;
+  if (!isFresh) {
+    if (typeof ctx.cache_read_tokens === 'number') {
+      cacheReadTokens = ctx.cache_read_tokens;
+    } else if (typeof ctx.cache_read_input_tokens === 'number') {
+      cacheReadTokens = ctx.cache_read_input_tokens;
+    } else if (typeof ctx.current_usage?.cache_read_input_tokens === 'number') {
+      cacheReadTokens = trans?.totalCacheRead ?? ctx.current_usage.cache_read_input_tokens;
+    } else if (typeof payload.tokens?.cache === 'number') {
+      cacheReadTokens = payload.tokens.cache;
+    } else if (typeof payload.cache?.read_tokens === 'number') {
+      cacheReadTokens = payload.cache.read_tokens;
+    } else if (trans?.totalCacheRead) {
+      cacheReadTokens = trans.totalCacheRead;
+    }
+  }
 
-  const cacheCreationTokens = typeof ctx.cache_creation_tokens === 'number'
-    ? ctx.cache_creation_tokens
-    : (payload.tokens?.cache_creation ?? payload.cache?.creation_tokens ?? trans?.totalCacheCreation ?? 0);
+  let cacheCreationTokens = 0;
+  if (!isFresh) {
+    if (typeof ctx.cache_creation_tokens === 'number') {
+      cacheCreationTokens = ctx.cache_creation_tokens;
+    } else if (typeof ctx.current_usage?.cache_creation_input_tokens === 'number') {
+      cacheCreationTokens = trans?.totalCacheCreation ?? ctx.current_usage.cache_creation_input_tokens;
+    } else if (typeof payload.tokens?.cache_creation === 'number') {
+      cacheCreationTokens = payload.tokens.cache_creation;
+    } else if (typeof payload.cache?.creation_tokens === 'number') {
+      cacheCreationTokens = payload.cache.creation_tokens;
+    } else if (trans?.totalCacheCreation) {
+      cacheCreationTokens = trans.totalCacheCreation;
+    }
+  }
 
-  const totalTokens = (typeof payload.tokens?.total === 'number')
+  const totalTokens = (typeof payload.tokens?.total === 'number' && !isFresh)
     ? payload.tokens.total
     : (inTokens + outTokens + cacheReadTokens);
 
@@ -451,39 +532,43 @@ function extractMetrics(payload) {
   const promptTotal = cacheReadTokens + inTokens;
   let cacheHitRate = null;
   let cacheMissRate = null;
-  if (promptTotal > 0) {
+  if (!isFresh && promptTotal > 0 && cacheReadTokens > 0) {
     cacheHitRate = (cacheReadTokens / promptTotal) * 100;
     cacheMissRate = 100 - cacheHitRate;
-  } else if (typeof payload.cache?.hit_rate === 'number') {
+  } else if (!isFresh && typeof payload.cache?.hit_rate === 'number') {
     cacheHitRate = payload.cache.hit_rate;
     cacheMissRate = 100 - cacheHitRate;
   }
 
   // Tools
-  const toolCount = typeof payload.tool_count === 'number'
+  const toolCount = isFresh ? 0 : (typeof payload.tool_count === 'number'
     ? payload.tool_count
     : (Array.isArray(payload.tools)
         ? payload.tools.length
-        : (typeof payload.tools === 'number' ? payload.tools : (trans?.totalTools ?? 0)));
+        : (typeof payload.tools === 'number' ? payload.tools : (trans?.totalTools ?? 0))));
 
-  const toolCounts = payload.tool_breakdown || payload.tool_usage || trans?.toolCounts || {};
-  const activeTool = payload.active_tool || (payload.agent_state === 'tool_use' ? trans?.lastTool : null);
+  const toolCounts = isFresh ? {} : (payload.tool_breakdown || payload.tool_usage || trans?.toolCounts || {});
+  const activeTool = isFresh ? null : (payload.active_tool || (payload.agent_state === 'tool_use' ? trans?.lastTool : null));
 
   // Subagents
-  const subagentCount = typeof payload.subagent_count === 'number'
+  const subagentCount = isFresh ? 0 : (typeof payload.subagent_count === 'number'
     ? payload.subagent_count
     : (Array.isArray(payload.subagents)
         ? payload.subagents.length
-        : (typeof payload.subagents === 'number' ? payload.subagents : (trans?.subagentsCount ?? 0)));
+        : (typeof payload.subagents === 'number' ? payload.subagents : (trans?.subagentsCount ?? 0))));
 
   // MCPs & Context files
   const mcpCount = typeof payload.mcp_count === 'number' ? payload.mcp_count : getMcpCount();
   const contextFiles = payload.context_files || getContextFiles(cwd);
 
-  // Duration
+  // Duration: use transcript startTime if available, otherwise elapsed time since session start
   let durationMs = payload.cost?.total_duration_ms || payload.duration_ms;
-  if (!durationMs && trans?.startTime) {
-    durationMs = Math.max(0, Date.now() - new Date(trans.startTime).getTime());
+  if (!durationMs) {
+    if (trans?.startTime) {
+      durationMs = Math.max(0, Date.now() - new Date(trans.startTime).getTime());
+    } else if (sessionInfo?.startTime) {
+      durationMs = Math.max(0, Date.now() - sessionInfo.startTime);
+    }
   }
   const durationStr = formatDuration(durationMs);
 
@@ -534,9 +619,9 @@ function extractMetrics(payload) {
     modeText: payload.mode_text,
     vcs: payload.vcs,
     sandbox: payload.sandbox,
-    taskCount: payload.task_count || 0,
-    artifactCount: payload.artifact_count || 0,
-    costEstimated: payload.cost?.estimated || payload.cost?.total_cost_usd || 0,
+    taskCount: isFresh ? 0 : (payload.task_count || 0),
+    artifactCount: isFresh ? 0 : (payload.artifact_count || 0),
+    costEstimated: isFresh ? 0 : (payload.cost?.estimated || payload.cost?.total_cost_usd || 0),
     terminalWidth: payload.terminal_width || (process.stdout.columns || 110)
   };
 }

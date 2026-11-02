@@ -171,6 +171,7 @@ Własny, responsywny i wysoce konfigurowalny pasek stanu (statusline) dla **Anti
 - **Wizualny pasek Context Window** — graficzny pasek zużycia tokenów (`[████░░░░] 45.8%`) z kolorystyką adaptacyjną (zielony < 60%, żółty 60–85%, czerwony > 85%).
 - **Wskaźnik stanu agenta** — kolorowe odznaki ze stanami: `● IDLE`, `⚡ WORKING`, `⚙ TOOL`, `🔍 REVIEW`, `🔑 AUTH`, `⏳ INIT`, `✖ ERROR`.
 - **Model i poziom myślenia** — nazwa modelu (np. `Gemini 3.8 Flash`) oraz poziom zaangażowania myślenia (`[high]`).
+- **Obsługa cyklu życia sesji i zerowanie metryk (`/new` / ładowanie)** — automatyczne wykrywanie nowej sesji oraz komendy `/new`. Czyszczenie pamięci podręcznej i resetowanie wskaźników (tokeny, narzędzia, podagenci, czas trwania) przy starcie nowej sesji.
 - **Integracja VCS (Git)** — aktywna gałąź (` main`) oraz wskaźnik niezacommitowanych zmian (`*`).
 - **Brak zewnętrznych zależności** — czysty Node.js (moduły standardowe), czas wykonania < 20 ms.
 - **Tryby zgodności i style** — obsługa trybu ASCII (`--ascii`), stylu minimalistycznego (`--style=minimal`) i wyłączania kolorów ANSI (`--no-color`).

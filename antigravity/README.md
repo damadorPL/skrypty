@@ -42,6 +42,7 @@ Responsywny pasek jednoliniowy z dynamicznym dopasowaniem segmentów do szeroko�
   - Żółty: 60% – 85%
   - Czerwony: powyżej 85%
 - **Wskaźnik stanu agenta** — czytelne odznaki (`● IDLE`, `⚡ WORKING`, `⚙ TOOL`, `🔍 REVIEW`, `🔑 AUTH`, `⏳ INIT`, `✖ ERROR`).
+- **Obsługa cyklu życia sesji i zerowanie metryk (`/new` / ładowanie)** — automatyczne wykrywanie nowej sesji oraz komendy `/new`. Czyszczenie pamięci podręcznej i resetowanie wskaźników (tokeny, narzędzia, podagenci, czas trwania) przy starcie sesji, zapobiegające wyciekaniu danych z poprzednich konwersacji.
 - **Wysoka wydajność i brak zależności** — czysty Node.js (moduły standardowe), przyrostowy odczyt transkryptu z cache'owaniem plikowym poniżej 2 ms.
 
 ---
