@@ -658,6 +658,59 @@ function extractMetrics(payload) {
   };
 }
 
+// Tool name to icon mapping
+const TOOL_ICONS = {
+  // Antigravity built-ins
+  run_command: '💻',
+  read_file: '📖',
+  edit_file: '✏️',
+  write_file: '📝',
+  search_web: '🌐',
+  ask_question: '❓',
+  invoke_subagent: '🤖',
+  send_message: '💬',
+  manage_task: '📋',
+  schedule: '⏱️',
+  call_mcp_tool: '🔌',
+  list_resources: '📦',
+  read_resource: '📄',
+  define_subagent: '🧠',
+  manage_subagents: '👥',
+
+  // Claude Code built-ins
+  bash: '💻',
+  fileread: '📖',
+  view: '📖',
+  fileedit: '✏️',
+  edit: '✏️',
+  filewrite: '📝',
+  write: '📝',
+  glob: '🔍',
+  grep: '🔍',
+  websearch: '🌐',
+  webfetch: '🌐',
+  agent: '🤖',
+  task: '🤖'
+};
+
+/**
+ * Returns an icon prefix for a given tool name.
+ */
+function getToolIcon(name, isAscii = false) {
+  if (isAscii || !name) return '';
+  const key = String(name).toLowerCase();
+  if (TOOL_ICONS[key]) return TOOL_ICONS[key] + ' ';
+  if (key.startsWith('mcp_') || key.startsWith('mcp:') || key.includes('mcp')) return '🔌 ';
+  if (key.includes('search') || key.includes('find') || key.includes('grep')) return '🔍 ';
+  if (key.includes('read') || key.includes('cat') || key.includes('view') || key.includes('fetch')) return '📖 ';
+  if (key.includes('edit') || key.includes('patch') || key.includes('replace') || key.includes('diff')) return '✏️ ';
+  if (key.includes('write') || key.includes('save') || key.includes('create') || key.includes('add')) return '📝 ';
+  if (key.includes('exec') || key.includes('cmd') || key.includes('bash') || key.includes('run') || key.includes('sh')) return '💻 ';
+  if (key.includes('agent') || key.includes('bot')) return '🤖 ';
+  if (key.includes('git')) return ' ';
+  return '🔧 ';
+}
+
 /**
  * Stacked Layout (Claude Code multi-line style).
  * Mirrors the 5-tier status bar:
@@ -710,13 +763,13 @@ function renderStackedLayout(m, isAscii = false) {
       const breakdown = Object.entries(m.toolCounts)
         .filter(([_, count]) => count > 0)
         .sort((a, b) => b[1] - a[1])
-        .map(([name, count]) => `${name}: ${count}`)
+        .map(([name, count]) => `${getToolIcon(name, isAscii)}${name}: ${count}`)
         .join(', ');
       if (breakdown) {
         toolDetails = ` (${breakdown})`;
       }
     } else if (m.activeTool) {
-      toolDetails = ` (${m.activeTool})`;
+      toolDetails = ` (${getToolIcon(m.activeTool, isAscii)}${m.activeTool})`;
     }
     line3Parts.push(`${C.cyan}${icon}${m.toolCount} ${m.toolCount === 1 ? 'tool' : 'tools'}${toolDetails}${C.reset}`);
   }
@@ -821,12 +874,12 @@ function renderInlineLayout(m, options = {}) {
       const parts = Object.entries(m.toolCounts)
         .filter(([_, count]) => count > 0)
         .sort((a, b) => b[1] - a[1])
-        .map(([name, count]) => `${name}: ${count}`);
+        .map(([name, count]) => `${getToolIcon(name, isAscii)}${name}: ${count}`);
       if (parts.length > 0) {
         toolBreakdown = ` (${parts.join(', ')})`;
       }
     } else if (m.activeTool) {
-      toolBreakdown = ` (${m.activeTool})`;
+      toolBreakdown = ` (${getToolIcon(m.activeTool, isAscii)}${m.activeTool})`;
     }
     toolsFullSeg = `${C.cyan}${icon}${label}${toolBreakdown}${C.reset}`;
   }
