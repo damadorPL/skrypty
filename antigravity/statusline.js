@@ -420,27 +420,59 @@ function getTranscriptStats(filePath) {
 }
 
 /**
- * Counts configured MCP servers in Antigravity and Claude Code.
+ * Counts configured and active (non-disabled) MCP servers in Antigravity and Claude Code.
  */
-function getMcpCount() {
+function getMcpCount(cwd) {
   const userHome = process.env.USERPROFILE || process.env.HOME || '';
-  
-  // 1. Antigravity MCP directory
+  const agyGlobalConfig = path.join(userHome, '.gemini', 'config', 'mcp_config.json');
+
+  // Helper to count non-disabled servers from parsed JSON config
+  const countActive = (cfg) => {
+    if (!cfg || typeof cfg.mcpServers !== 'object' || cfg.mcpServers === null) return 0;
+    return Object.values(cfg.mcpServers).filter(s => s && typeof s === 'object' && !s.disabled).length;
+  };
+
+  // 1. Antigravity global MCP configuration (~/.gemini/config/mcp_config.json)
+  if (fs.existsSync(agyGlobalConfig)) {
+    try {
+      const cfg = JSON.parse(fs.readFileSync(agyGlobalConfig, 'utf8'));
+      return countActive(cfg);
+    } catch {
+      return 0;
+    }
+  }
+
+  // 2. Project/Workspace level Antigravity configs
+  const searchDirs = [cwd, process.cwd()].filter(Boolean);
+  for (const d of searchDirs) {
+    for (const rel of ['.gemini/config/mcp_config.json', '.gemini/mcp_config.json', 'mcp_config.json']) {
+      const candidate = path.join(d, rel);
+      if (fs.existsSync(candidate)) {
+        try {
+          const cfg = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+          return countActive(cfg);
+        } catch {
+          return 0;
+        }
+      }
+    }
+  }
+
+  // 3. Claude Code configuration (~/.claude.json or project .mcp.json)
+  const claudeCfg = path.join(userHome, '.claude.json');
+  if (fs.existsSync(claudeCfg)) {
+    try {
+      const cfg = JSON.parse(fs.readFileSync(claudeCfg, 'utf8'));
+      return countActive(cfg);
+    } catch {}
+  }
+
+  // 4. Fallback: Antigravity MCP directory if no config file found
   const agyMcpDir = path.join(userHome, '.gemini', 'antigravity-cli', 'mcp');
   if (fs.existsSync(agyMcpDir)) {
     try {
       const dirs = fs.readdirSync(agyMcpDir, { withFileTypes: true }).filter(d => d.isDirectory());
       if (dirs.length > 0) return dirs.length;
-    } catch {}
-  }
-
-  // 2. Claude ~/.claude.json
-  const claudeCfg = path.join(userHome, '.claude.json');
-  if (fs.existsSync(claudeCfg)) {
-    try {
-      const cfg = JSON.parse(fs.readFileSync(claudeCfg, 'utf8'));
-      const s = Object.keys(cfg.mcpServers || {});
-      if (s.length > 0) return s.length;
     } catch {}
   }
 
@@ -558,7 +590,7 @@ function extractMetrics(payload) {
         : (typeof payload.subagents === 'number' ? payload.subagents : (trans?.subagentsCount ?? 0))));
 
   // MCPs & Context files
-  const mcpCount = typeof payload.mcp_count === 'number' ? payload.mcp_count : getMcpCount();
+  const mcpCount = typeof payload.mcp_count === 'number' ? payload.mcp_count : getMcpCount(cwd);
   const contextFiles = payload.context_files || getContextFiles(cwd);
 
   // Duration: use transcript startTime if available, otherwise elapsed time since session start
@@ -669,7 +701,7 @@ function renderStackedLayout(m, isAscii = false) {
     line3Parts.push(`${C.gray}${count} ${names}${C.reset}`);
   }
   if (m.mcpCount > 0) {
-    line3Parts.push(`${C.gray}${m.mcpCount} MCPs${C.reset}`);
+    line3Parts.push(`${C.gray}${m.mcpCount} ${m.mcpCount === 1 ? 'MCP' : 'MCPs'}${C.reset}`);
   }
   if (m.toolCount > 0) {
     const icon = isAscii ? '' : '🛠️ ';
