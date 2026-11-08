@@ -705,7 +705,19 @@ function renderStackedLayout(m, isAscii = false) {
   }
   if (m.toolCount > 0) {
     const icon = isAscii ? '' : '🛠️ ';
-    const toolDetails = m.activeTool ? ` (${m.activeTool})` : '';
+    let toolDetails = '';
+    if (m.toolCounts && Object.keys(m.toolCounts).length > 0) {
+      const breakdown = Object.entries(m.toolCounts)
+        .filter(([_, count]) => count > 0)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => `${name}: ${count}`)
+        .join(', ');
+      if (breakdown) {
+        toolDetails = ` (${breakdown})`;
+      }
+    } else if (m.activeTool) {
+      toolDetails = ` (${m.activeTool})`;
+    }
     line3Parts.push(`${C.cyan}${icon}${m.toolCount} ${m.toolCount === 1 ? 'tool' : 'tools'}${toolDetails}${C.reset}`);
   }
   if (m.subagentCount > 0) {
@@ -797,10 +809,26 @@ function renderInlineLayout(m, options = {}) {
   }
 
   // 5. Tools & Subagents
-  let toolsSeg = '';
+  let toolsFullSeg = '';
+  let toolsShortSeg = '';
   if (m.toolCount > 0) {
     const icon = isAscii ? '' : '🛠️ ';
-    toolsSeg = `${C.cyan}${icon}${m.toolCount} ${m.toolCount === 1 ? 'tool' : 'tools'}${C.reset}`;
+    const label = `${m.toolCount} ${m.toolCount === 1 ? 'tool' : 'tools'}`;
+    toolsShortSeg = `${C.cyan}${icon}${label}${C.reset}`;
+
+    let toolBreakdown = '';
+    if (m.toolCounts && Object.keys(m.toolCounts).length > 0) {
+      const parts = Object.entries(m.toolCounts)
+        .filter(([_, count]) => count > 0)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => `${name}: ${count}`);
+      if (parts.length > 0) {
+        toolBreakdown = ` (${parts.join(', ')})`;
+      }
+    } else if (m.activeTool) {
+      toolBreakdown = ` (${m.activeTool})`;
+    }
+    toolsFullSeg = `${C.cyan}${icon}${label}${toolBreakdown}${C.reset}`;
   }
 
   let subagentSeg = '';
@@ -861,21 +889,23 @@ function renderInlineLayout(m, options = {}) {
 
     // Candidate segment combinations in priority order
     const candidateSets = [
-      // 1. Everything
-      [stateSeg, modelFull, ctxSeg, tokFullSeg, cacheHitSeg, toolsSeg, subagentSeg, gitSeg, cwdSeg, sandboxSeg, tasksSeg, artifactsSeg, costSeg],
+      // 1. Everything with full tool breakdown
+      [stateSeg, modelFull, ctxSeg, tokFullSeg, cacheHitSeg, toolsFullSeg, subagentSeg, gitSeg, cwdSeg, sandboxSeg, tasksSeg, artifactsSeg, costSeg],
       // 2. Drop cost, artifacts, tasks, sandbox
-      [stateSeg, modelFull, ctxSeg, tokFullSeg, cacheHitSeg, toolsSeg, subagentSeg, gitSeg, cwdSeg],
-      // 3. Drop subagents & CWD (keep full token breakdown)
-      [stateSeg, modelFull, ctxSeg, tokFullSeg, cacheHitSeg, toolsSeg, gitSeg],
-      // 4. Compact tokens
-      [stateSeg, modelFull, ctxSeg, tokShortSeg, cacheHitSeg, toolsSeg, gitSeg, cwdSeg],
-      // 5. Short model & drop tools
+      [stateSeg, modelFull, ctxSeg, tokFullSeg, cacheHitSeg, toolsFullSeg, subagentSeg, gitSeg, cwdSeg],
+      // 3. Compact tools & subagents
+      [stateSeg, modelFull, ctxSeg, tokFullSeg, cacheHitSeg, toolsShortSeg, subagentSeg, gitSeg, cwdSeg],
+      // 4. Drop subagents & CWD (keep full token breakdown)
+      [stateSeg, modelFull, ctxSeg, tokFullSeg, cacheHitSeg, toolsShortSeg, gitSeg],
+      // 5. Compact tokens
+      [stateSeg, modelFull, ctxSeg, tokShortSeg, cacheHitSeg, toolsShortSeg, gitSeg, cwdSeg],
+      // 6. Short model & drop tools
       [stateSeg, modelShort, ctxSeg, tokShortSeg, cacheHitSeg, gitSeg, cwdSeg],
-      // 6. Drop cache & CWD
+      // 7. Drop cache & CWD
       [stateSeg, modelShort, ctxSeg, tokShortSeg, gitSeg],
-      // 7. Minimal: State, Model, Ctx, Short Tokens
+      // 8. Minimal: State, Model, Ctx, Short Tokens
       [stateSeg, modelShort, ctxSeg, tokShortSeg],
-      // 8. Bare minimum
+      // 9. Bare minimum
       [stateSeg, modelShort, ctxSeg]
     ];
 
@@ -948,6 +978,7 @@ function runDemo() {
     context_files: ['CLAUDE.md'],
     mcp_count: 2,
     tool_count: 8,
+    tool_breakdown: { read_file: 5, run_command: 3 },
     subagent_count: 1,
     vcs: {
       branch: 'main',
@@ -979,6 +1010,7 @@ function runDemo() {
     },
     plan_tier: 'Pro',
     tool_count: 86,
+    tool_breakdown: { run_command: 42, read_file: 28, edit_file: 16 },
     subagent_count: 2,
     mcp_count: 4,
     vcs: { branch: 'main', dirty: true },
@@ -1146,6 +1178,7 @@ function main() {
         enabled: true
       },
       tool_count: 24,
+      tool_breakdown: { run_command: 14, read_file: 7, edit_file: 3 },
       subagent_count: 1,
       mcp_count: 4,
       cost: {
